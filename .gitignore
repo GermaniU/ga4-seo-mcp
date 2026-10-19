@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local agent state (never commit)
+.hermes/
+.claude/
+
+# Secrets and credentials (never commit)
+.env
+.env.*
+!.env.example
+oauth-client*.json
+client_secret*.json
+*credentials*.json
+sa-key*.json
+*-sa.json
+dev-token

@@ -1,0 +1,74 @@
+[project]
+name = "ga4-seo-mcp"
+version = "0.1.0"
+description = "MCP server for Google Analytics 4, Search Console and PageSpeed: audit and set up site measurement."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "GermaniU" }]
+keywords = [
+  "mcp",
+  "ga4",
+  "google-analytics",
+  "search-console",
+  "seo",
+  "pagespeed",
+  "model-context-protocol",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP :: Site Management",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "mcp[cli]==1.28.1",
+  "google-analytics-admin>=0.24.0",
+  "google-analytics-data>=0.18.0",
+  "google-api-python-client>=2.120.0",
+  "google-auth>=2.30.0",
+  "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+# Google Ads Keyword Planner toolset. Its major version must match a live Google Ads API version.
+ads = ["google-ads>=31.1.0"]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+  "ruff>=0.6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/GermaniU/ga4-seo-mcp"
+Repository = "https://github.com/GermaniU/ga4-seo-mcp"
+Issues = "https://github.com/GermaniU/ga4-seo-mcp/issues"
+Changelog = "https://github.com/GermaniU/ga4-seo-mcp/blob/main/CHANGELOG.md"
+
+[project.scripts]
+ga4-seo-mcp = "ga4_seo_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
