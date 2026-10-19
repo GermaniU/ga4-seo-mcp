@@ -184,18 +184,14 @@ def test_plan_distinguishes_dimensions_with_same_name_and_different_scope(google
     )
     google.properties.append(prop)
     google.dimensions.setdefault("properties/123456789", []).append(
-        CustomDimension(
-            parameter_name="plan_type", display_name="Plan type", scope="USER"
-        )
+        CustomDimension(parameter_name="plan_type", display_name="Plan type", scope="USER")
     )
 
     result = bootstrap.make_tool(writes=False, gsc=False)(
         **{
             **ARGS,
             "custom_dimensions": [
-                bootstrap.CustomDimensionSpec(
-                    parameter_name="plan_type", display_name="Plan type"
-                )
+                bootstrap.CustomDimensionSpec(parameter_name="plan_type", display_name="Plan type")
             ],
         }
     )
@@ -211,9 +207,7 @@ def test_plan_distinguishes_dimensions_with_same_name_and_different_scope(google
         **{
             **ARGS,
             "custom_dimensions": [
-                bootstrap.CustomDimensionSpec(
-                    parameter_name="plan_type", display_name="Plan type"
-                )
+                bootstrap.CustomDimensionSpec(parameter_name="plan_type", display_name="Plan type")
             ],
         }
     )
