@@ -34,7 +34,14 @@ BOLD, DIM, GREEN, CYAN, YELLOW, RESET = (
 )
 
 
+THIN_SPACES = {"\u202f": " ", "\u00a0": " ", "\u2009": " ", "\u2007": " "}
+
+
 def say(text: str = "", pause: float = 0.6) -> None:
+    # PageSpeed formatea sus displayValue con espacios angostos (U+202F/NBSP); la
+    # fuente del GIF no tiene ese glifo y lo dibuja como un cuadro roto.
+    for bad, good in THIN_SPACES.items():
+        text = text.replace(bad, good)
     print(text, flush=True)
     time.sleep(pause)
 
@@ -53,6 +60,11 @@ def payload(result):
 
 
 async def main() -> None:
+    # Primera línea ya en pantalla: si no, el primer cuadro del GIF sale vacío y
+    # LinkedIn lo puede usar como miniatura.
+    say(f"{DIM}$ python scripts/demo.py   ·   MCP over stdio, read-only{RESET}", 0.8)
+    say()
+
     params = StdioServerParameters(
         command=sys.executable, args=["-m", "ga4_seo_mcp.server"], env=dict(os.environ)
     )
