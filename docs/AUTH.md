@@ -65,7 +65,7 @@ Why your own client and not a shared one: these scopes are *sensitive*, and a pu
    ga4-seo-mcp doctor
    ```
 
-   In Docker: `-v /path/to/service-account.json:/creds/sa.json:ro -e GOOGLE_APPLICATION_CREDENTIALS=/creds/sa.json`.
+   In Docker: `--user "$(id -u):$(id -g)" -v /path/to/service-account.json:/creds/credentials.json:ro -e GOOGLE_APPLICATION_CREDENTIALS=/creds/credentials.json`. The same works for the user ADC file (`~/.config/gcloud/application_default_credentials.json`): `GOOGLE_APPLICATION_CREDENTIALS` accepts both. `--user` matters because the key is `0600` and the image's default user cannot read it.
 
 A service account cannot create a GA4 *account*, and it only sees the properties you add it to — which is exactly what you want for least privilege.
 

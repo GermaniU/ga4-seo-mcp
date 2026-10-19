@@ -76,6 +76,9 @@ def run_doctor(toolsets, writes: bool, out=None) -> int:
             report("fail", f"no Google credentials: {_short(exc)}")
             print(f"       fix: {auth_command(toolsets, writes)}", file=out)
             creds = None
+        except OSError as exc:  # e.g. a mounted key file this user cannot read
+            report("fail", f"cannot read the credentials file: {_short(exc)}")
+            creds = None
 
     if creds is not None:
         try:

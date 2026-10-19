@@ -164,10 +164,13 @@ claude mcp add ga4-seo -- uvx ga4-seo-mcp
 }
 ```
 
-**Docker** (stdio; monta tus ADC en solo lectura o la llave de una cuenta de servicio):
+**Docker** (stdio). Monta tu archivo de credenciales en solo lectura (el de ADC de `gcloud` o la llave de una cuenta de servicio) y corre el contenedor con tu propio usuario para que pueda leer un archivo `0600`:
 
 ```bash
-docker run -i --rm -v ~/.config/gcloud:/home/app/.config/gcloud:ro ghcr.io/germaniu/ga4-seo-mcp
+docker run -i --rm --user "$(id -u):$(id -g)" \
+  -v ~/.config/gcloud/application_default_credentials.json:/creds/credentials.json:ro \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/creds/credentials.json \
+  ghcr.io/germaniu/ga4-seo-mcp
 ```
 
 ---

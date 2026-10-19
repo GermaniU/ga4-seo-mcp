@@ -88,13 +88,27 @@
         {
           "type": "named",
           "name": "--volume",
-          "description": "Mount your gcloud Application Default Credentials read-only into the container.",
-          "value": "{gcloud_config}:/home/app/.config/gcloud:ro",
+          "description": "Mount your credentials file (gcloud ADC or a service account key) read-only.",
+          "value": "{credentials_file}:/creds/credentials.json:ro",
+          "isRequired": true,
+          "variables": {
+            "credentials_file": {
+              "description": "Host path of the credentials JSON, usually ~/.config/gcloud/application_default_credentials.json.",
+              "format": "filepath",
+              "isRequired": true
+            }
+          }
+        },
+        {
+          "type": "named",
+          "name": "--user",
+          "description": "Run as your own uid:gid so the container can read a 0600 credentials file.",
+          "value": "{uid_gid}",
           "isRequired": false,
           "variables": {
-            "gcloud_config": {
-              "description": "Host directory with application_default_credentials.json (usually ~/.config/gcloud).",
-              "format": "filepath",
+            "uid_gid": {
+              "description": "Output of: echo \"$(id -u):$(id -g)\"",
+              "format": "string",
               "isRequired": true
             }
           }
@@ -103,9 +117,10 @@
       "environmentVariables": [
         {
           "name": "GOOGLE_APPLICATION_CREDENTIALS",
-          "description": "Path to a service account key file. Leave unset to use Application Default Credentials from gcloud.",
+          "description": "Path of the mounted credentials file inside the container.",
           "format": "filepath",
-          "isRequired": false
+          "isRequired": true,
+          "default": "/creds/credentials.json"
         },
         {
           "name": "GA4SEO_TOOLSETS",

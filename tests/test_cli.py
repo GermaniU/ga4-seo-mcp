@@ -57,3 +57,12 @@ def test_doctor_psi_only_needs_no_credentials(monkeypatch, capsys):
     monkeypatch.setattr(doctor.google.auth, "default", must_not_be_called)
     assert doctor.run_doctor(("psi",), writes=False) == 0
     assert "all checks passed" in capsys.readouterr().out
+
+
+def test_doctor_unreadable_credentials_file_is_reported(monkeypatch, capsys):
+    def unreadable(scopes=None):
+        raise PermissionError(13, "Permission denied", "/creds/credentials.json")
+
+    monkeypatch.setattr(doctor.google.auth, "default", unreadable)
+    assert doctor.run_doctor(("admin",), writes=False) == 1
+    assert "[fail] cannot read the credentials file" in capsys.readouterr().out

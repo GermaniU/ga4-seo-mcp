@@ -25,8 +25,9 @@ COPY src ./src
 RUN uv sync --locked --no-editable --extra ads \
     && useradd --system --uid 10001 --create-home --home-dir /home/app app
 
-# ADC lives in ~/.config/gcloud: mount yours read-only at /home/app/.config/gcloud,
-# or mount a service account key and set GOOGLE_APPLICATION_CREDENTIALS.
+# Credentials: mount the ADC file or a service account key read-only (e.g. at
+# /creds/credentials.json), set GOOGLE_APPLICATION_CREDENTIALS to it, and run with
+# --user "$(id -u):$(id -g)" so a 0600 key stays readable.
 USER app
 EXPOSE 8000
 
