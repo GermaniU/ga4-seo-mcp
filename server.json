@@ -1,0 +1,164 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.GermaniU/ga4-seo-mcp",
+  "title": "GA4 SEO MCP",
+  "description": "Set up and audit site measurement: GA4, Search Console and PageSpeed. Read-only unless enabled.",
+  "repository": {
+    "url": "https://github.com/GermaniU/ga4-seo-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "ga4-seo-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GOOGLE_APPLICATION_CREDENTIALS",
+          "description": "Path to a service account key file. Leave unset to use Application Default Credentials from gcloud.",
+          "format": "filepath",
+          "isRequired": false
+        },
+        {
+          "name": "GA4SEO_TOOLSETS",
+          "description": "Comma-separated toolsets: admin,data,gsc,psi,dataforseo,ads.",
+          "format": "string",
+          "isRequired": false,
+          "default": "admin,data,gsc,psi"
+        },
+        {
+          "name": "GA4SEO_ENABLE_WRITES",
+          "description": "Set to 1 to register tools that create, update, delete, submit or verify. Off by default.",
+          "format": "string",
+          "isRequired": false,
+          "default": "0",
+          "choices": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "name": "PAGESPEED_API_KEY",
+          "description": "PageSpeed Insights API key. Recommended: the anonymous quota is shared and often exhausted.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "DATAFORSEO_LOGIN",
+          "description": "DataForSEO login, for the dataforseo toolset.",
+          "format": "string",
+          "isRequired": false
+        },
+        {
+          "name": "DATAFORSEO_PASSWORD",
+          "description": "DataForSEO password, for the dataforseo toolset.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_ADS_DEVELOPER_TOKEN",
+          "description": "Google Ads developer token, for the ads toolset.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_ADS_LOGIN_CUSTOMER_ID",
+          "description": "Manager (MCC) customer ID, only when operating through a manager account.",
+          "format": "string",
+          "isRequired": false
+        }
+      ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/germaniu/ga4-seo-mcp:0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "docker",
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--volume",
+          "description": "Mount your gcloud Application Default Credentials read-only into the container.",
+          "value": "{gcloud_config}:/home/app/.config/gcloud:ro",
+          "isRequired": false,
+          "variables": {
+            "gcloud_config": {
+              "description": "Host directory with application_default_credentials.json (usually ~/.config/gcloud).",
+              "format": "filepath",
+              "isRequired": true
+            }
+          }
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "GOOGLE_APPLICATION_CREDENTIALS",
+          "description": "Path to a service account key file. Leave unset to use Application Default Credentials from gcloud.",
+          "format": "filepath",
+          "isRequired": false
+        },
+        {
+          "name": "GA4SEO_TOOLSETS",
+          "description": "Comma-separated toolsets: admin,data,gsc,psi,dataforseo,ads.",
+          "format": "string",
+          "isRequired": false,
+          "default": "admin,data,gsc,psi"
+        },
+        {
+          "name": "GA4SEO_ENABLE_WRITES",
+          "description": "Set to 1 to register tools that create, update, delete, submit or verify. Off by default.",
+          "format": "string",
+          "isRequired": false,
+          "default": "0",
+          "choices": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "name": "PAGESPEED_API_KEY",
+          "description": "PageSpeed Insights API key. Recommended: the anonymous quota is shared and often exhausted.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "DATAFORSEO_LOGIN",
+          "description": "DataForSEO login, for the dataforseo toolset.",
+          "format": "string",
+          "isRequired": false
+        },
+        {
+          "name": "DATAFORSEO_PASSWORD",
+          "description": "DataForSEO password, for the dataforseo toolset.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_ADS_DEVELOPER_TOKEN",
+          "description": "Google Ads developer token, for the ads toolset.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_ADS_LOGIN_CUSTOMER_ID",
+          "description": "Manager (MCC) customer ID, only when operating through a manager account.",
+          "format": "string",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

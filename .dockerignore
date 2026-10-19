@@ -1,0 +1,16 @@
+.git
+.github
+.hermes
+.venv
+.pytest_cache
+.ruff_cache
+dist
+tests
+docs
+scripts
+**/__pycache__
+.env
+.env.*
+*credentials*.json
+oauth-client*.json
+sa-key*.json
