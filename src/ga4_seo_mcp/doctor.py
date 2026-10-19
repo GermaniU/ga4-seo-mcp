@@ -44,10 +44,19 @@ def _probe_gsc(creds) -> str:
 
 
 def _token_scopes(creds) -> set[str] | None:
-    resp = requests.get(TOKENINFO, params={"access_token": creds.token}, timeout=15)
+    try:
+        resp = requests.get(TOKENINFO, params={"access_token": creds.token}, timeout=15)
+    except requests.RequestException:
+        # Nunca dejar que un error de red propague el token: requests incluye la
+        # URL (con access_token=...) en la excepción y un traceback lo expondría.
+        return None
     if not resp.ok:
         return None
-    return set(resp.json().get("scope", "").split())
+    try:
+        scope = resp.json().get("scope", "")
+    except ValueError:
+        return None
+    return set(scope.split())
 
 
 def run_doctor(toolsets, writes: bool, out=None) -> int:

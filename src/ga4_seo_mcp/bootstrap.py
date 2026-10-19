@@ -87,10 +87,12 @@ def _plan(
     property_id = prop["property_id"] if prop else None
 
     existing_events: set[str] = set()
-    existing_dims: set[str] = set()
+    existing_dims: set[tuple[str, str]] = set()
     if property_id:
         existing_events = {k["event_name"] for k in admin.list_key_events(property_id)}
-        existing_dims = {d["parameter_name"] for d in admin.list_custom_dimensions(property_id)}
+        existing_dims = {
+            (d["parameter_name"], d["scope"]) for d in admin.list_custom_dimensions(property_id)
+        }
 
     steps: list[dict[str, Any]] = [
         {
@@ -122,7 +124,9 @@ def _plan(
                 "parameter_name": spec.parameter_name,
                 "display_name": spec.display_name,
                 "scope": spec.scope,
-                "action": "exists" if spec.parameter_name in existing_dims else "create",
+                "action": (
+                    "exists" if (spec.parameter_name, spec.scope) in existing_dims else "create"
+                ),
             }
         )
     if gsc:

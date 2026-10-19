@@ -177,6 +177,50 @@ def test_plan_on_empty_account_creates_everything(google):
     assert "--enable-writes" in result["note"]
 
 
+def test_plan_distinguishes_dimensions_with_same_name_and_different_scope(google):
+    # Si ya existe plan_type como USER y se pide como EVENT, hay que crearla.
+    prop = Property(
+        name="properties/123456789", parent=f"accounts/{ACCOUNT}", display_name="Example"
+    )
+    google.properties.append(prop)
+    google.dimensions.setdefault("properties/123456789", []).append(
+        CustomDimension(
+            parameter_name="plan_type", display_name="Plan type", scope="USER"
+        )
+    )
+
+    result = bootstrap.make_tool(writes=False, gsc=False)(
+        **{
+            **ARGS,
+            "custom_dimensions": [
+                bootstrap.CustomDimensionSpec(
+                    parameter_name="plan_type", display_name="Plan type"
+                )
+            ],
+        }
+    )
+    steps = {s["step"]: s for s in result["steps"]}
+    assert steps["custom_dimension"]["scope"] == "EVENT"
+    assert steps["custom_dimension"]["action"] == "create"
+
+    # Una vez creada con ese scope, el plan la reconoce como existente.
+    google.dimensions["properties/123456789"].append(
+        CustomDimension(parameter_name="plan_type", display_name="Plan type", scope="EVENT")
+    )
+    again = bootstrap.make_tool(writes=False, gsc=False)(
+        **{
+            **ARGS,
+            "custom_dimensions": [
+                bootstrap.CustomDimensionSpec(
+                    parameter_name="plan_type", display_name="Plan type"
+                )
+            ],
+        }
+    )
+    again_steps = {s["step"]: s for s in again["steps"]}
+    assert again_steps["custom_dimension"]["action"] == "exists"
+
+
 def test_plan_detects_existing_property_by_stream_domain(google):
     _existing_site(google)
     result = bootstrap.make_tool(writes=False, gsc=True)(**{**ARGS, "property_display_name": "New"})

@@ -66,3 +66,26 @@ def test_doctor_unreadable_credentials_file_is_reported(monkeypatch, capsys):
     monkeypatch.setattr(doctor.google.auth, "default", unreadable)
     assert doctor.run_doctor(("admin",), writes=False) == 1
     assert "[fail] cannot read the credentials file" in capsys.readouterr().out
+
+
+def test_doctor_does_not_leak_the_access_token_on_network_error(monkeypatch, capsys):
+    class FakeCreds:
+        token = "SECRET_TOKEN_XYZ"
+
+        def refresh(self, request=None):
+            pass
+
+    monkeypatch.setattr(doctor.google.auth, "default", lambda *a, **k: (FakeCreds(), "project"))
+
+    def boom(*a, **k):
+        raise doctor.requests.exceptions.ConnectionError(
+            "Max retries exceeded with url: "
+            "/tokeninfo?access_token=SECRET_TOKEN_XYZ (Caused by ConnectTimeoutError)"
+        )
+
+    monkeypatch.setattr(doctor.requests, "get", boom)
+    assert doctor.run_doctor(("data",), writes=False) == 1
+    captured = capsys.readouterr()
+    assert "SECRET_TOKEN_XYZ" not in captured.out
+    assert "SECRET_TOKEN_XYZ" not in captured.err
+    assert "could not read the token scopes" in captured.out
