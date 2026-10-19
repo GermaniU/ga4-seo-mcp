@@ -1,60 +1,57 @@
-"""
-Tools del MCP para Google Search Console API.
-
-Cubre: queries SEO, page performance, indexing status, sitemaps.
-Requiere scope ADC: webmasters.readonly (o webmasters)
-API: searchconsole.googleapis.com
-"""
+"""Search Console tools: queries, pages, sitemaps and domain verification."""
 
 from __future__ import annotations
 
 from typing import Any
 
-import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from mcp.server.fastmcp import FastMCP
 
-from .mcp_app import mcp
+from .annotations import ENSURE, READ
+from .auth import credentials
+from .scopes import SITEVERIFICATION, WEBMASTERS, WEBMASTERS_READONLY
 
 
 def _sc_client(write: bool = False):
-    """Cliente Search Console v1 vía discovery, autenticado con ADC.
-
-    Args:
-        write: si True, pide scope `webmasters` (no readonly) para add/delete sites,
-               submit sitemaps, etc. Default readonly (más seguro).
-    """
-    scope = (
-        "https://www.googleapis.com/auth/webmasters"
-        if write
-        else "https://www.googleapis.com/auth/webmasters.readonly"
-    )
-    credentials, _ = google.auth.default(scopes=[scope])
-    return build("searchconsole", "v1", credentials=credentials, cache_discovery=False)
+    creds = credentials(WEBMASTERS if write else WEBMASTERS_READONLY)
+    return build("searchconsole", "v1", credentials=creds, cache_discovery=False)
 
 
 def _siteverification_client():
-    """Cliente Site Verification API — para auto-verify via GA."""
-    credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/siteverification"]
-    )
-    return build("siteVerification", "v1", credentials=credentials, cache_discovery=False)
+    creds = credentials(SITEVERIFICATION)
+    return build("siteVerification", "v1", credentials=creds, cache_discovery=False)
 
 
-@mcp.tool()
+def _rows(resp: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    return [
+        {
+            key: r["keys"][0],
+            "clicks": r.get("clicks", 0),
+            "impressions": r.get("impressions", 0),
+            "ctr": round(r.get("ctr", 0) * 100, 2),
+            "position": round(r.get("position", 0), 2),
+        }
+        for r in resp.get("rows", [])
+    ]
+
+
+def dns_txt_token(domain: str) -> str | None:
+    """The TXT value that proves ownership of a domain property (asking for it changes nothing)."""
+    body = {"site": {"identifier": domain, "type": "INET_DOMAIN"}, "verificationMethod": "DNS_TXT"}
+    return _siteverification_client().webResource().getToken(body=body).execute().get("token")
+
+
 def sc_list_sites() -> list[dict[str, Any]]:
+    """List the Search Console sites you can access.
+
+    Each entry has `siteUrl` ('sc-domain:example.com' for domain properties or a URL prefix
+    like 'https://example.com/') and `permissionLevel` ('siteOwner', 'siteFullUser',
+    'siteRestrictedUser' or 'siteUnverifiedUser').
     """
-    Lista sites verificados en Search Console accesibles al usuario.
-
-    Devuelve cada uno con su `siteUrl` (formato 'sc-domain:dominio.com' o URL)
-    y `permissionLevel` ('siteOwner', 'siteFullUser', 'siteRestrictedUser').
-    """
-    svc = _sc_client()
-    resp = svc.sites().list().execute()
-    return resp.get("siteEntry", [])
+    return _sc_client().sites().list().execute().get("siteEntry", [])
 
 
-@mcp.tool()
 def sc_top_queries(
     site_url: str,
     date_start: str,
@@ -62,39 +59,27 @@ def sc_top_queries(
     limit: int = 25,
     country: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Top queries de búsqueda con clicks, impressions, CTR, position media.
+    """Top search queries with clicks, impressions, CTR (%) and average position.
 
     Args:
-        site_url: 'https://example.com/' o 'sc-domain:example.com'
-        date_start: 'YYYY-MM-DD'
-        date_end: 'YYYY-MM-DD'
-        limit: filas (max 25000)
-        country: opcional, código ISO-3 (ej. 'mex', 'usa') para filtrar.
+        site_url: 'sc-domain:example.com' or 'https://example.com/', exactly as in sc_list_sites.
+        date_start: 'YYYY-MM-DD'.
+        date_end: 'YYYY-MM-DD'. Search Console data lags 2-3 days.
+        limit: rows to return (max 25000).
+        country: optional ISO 3166-1 alpha-3 code to filter by, e.g. 'mex' or 'usa'.
     """
-    svc = _sc_client()
     body: dict[str, Any] = {
         "startDate": date_start,
         "endDate": date_end,
         "dimensions": ["query"],
         "rowLimit": limit,
-        "orderBy": [{"fieldName": "clicks", "sortOrder": "DESCENDING"}],
     }
     if country:
         body["dimensionFilterGroups"] = [
             {"filters": [{"dimension": "country", "operator": "equals", "expression": country}]}
         ]
-    resp = svc.searchanalytics().query(siteUrl=site_url, body=body).execute()
-    rows = [
-        {
-            "query": r["keys"][0],
-            "clicks": r.get("clicks", 0),
-            "impressions": r.get("impressions", 0),
-            "ctr": round(r.get("ctr", 0) * 100, 2),
-            "position": round(r.get("position", 0), 2),
-        }
-        for r in resp.get("rows", [])
-    ]
+    resp = _sc_client().searchanalytics().query(siteUrl=site_url, body=body).execute()
+    rows = _rows(resp, "query")
     return {
         "site_url": site_url,
         "date_range": {"start": date_start, "end": date_end},
@@ -103,33 +88,21 @@ def sc_top_queries(
     }
 
 
-@mcp.tool()
 def sc_page_performance(
     site_url: str,
     date_start: str,
     date_end: str,
     limit: int = 25,
 ) -> dict[str, Any]:
-    """Top páginas SEO ordenadas por clicks. Métricas: clicks, impressions, CTR, position."""
-    svc = _sc_client()
+    """Top pages in Google Search by clicks, with impressions, CTR (%) and average position."""
     body = {
         "startDate": date_start,
         "endDate": date_end,
         "dimensions": ["page"],
         "rowLimit": limit,
-        "orderBy": [{"fieldName": "clicks", "sortOrder": "DESCENDING"}],
     }
-    resp = svc.searchanalytics().query(siteUrl=site_url, body=body).execute()
-    rows = [
-        {
-            "page": r["keys"][0],
-            "clicks": r.get("clicks", 0),
-            "impressions": r.get("impressions", 0),
-            "ctr": round(r.get("ctr", 0) * 100, 2),
-            "position": round(r.get("position", 0), 2),
-        }
-        for r in resp.get("rows", [])
-    ]
+    resp = _sc_client().searchanalytics().query(siteUrl=site_url, body=body).execute()
+    rows = _rows(resp, "page")
     return {
         "site_url": site_url,
         "date_range": {"start": date_start, "end": date_end},
@@ -138,7 +111,6 @@ def sc_page_performance(
     }
 
 
-@mcp.tool()
 def sc_query_breakdown_by_page(
     site_url: str,
     page_url: str,
@@ -146,40 +118,27 @@ def sc_query_breakdown_by_page(
     date_end: str,
     limit: int = 25,
 ) -> dict[str, Any]:
+    """Which search queries bring traffic to one specific page.
+
+    Useful to decide which keywords to strengthen in that page's content.
     """
-    Para una URL específica, qué queries la traen — útil para optimizar
-    contenido (saber qué keywords trabajar más en una página dada).
-    """
-    svc = _sc_client()
     body = {
         "startDate": date_start,
         "endDate": date_end,
         "dimensions": ["query"],
         "rowLimit": limit,
-        "orderBy": [{"fieldName": "clicks", "sortOrder": "DESCENDING"}],
         "dimensionFilterGroups": [
             {"filters": [{"dimension": "page", "operator": "equals", "expression": page_url}]}
         ],
     }
-    resp = svc.searchanalytics().query(siteUrl=site_url, body=body).execute()
-    rows = [
-        {
-            "query": r["keys"][0],
-            "clicks": r.get("clicks", 0),
-            "impressions": r.get("impressions", 0),
-            "ctr": round(r.get("ctr", 0) * 100, 2),
-            "position": round(r.get("position", 0), 2),
-        }
-        for r in resp.get("rows", [])
-    ]
+    resp = _sc_client().searchanalytics().query(siteUrl=site_url, body=body).execute()
+    rows = _rows(resp, "query")
     return {"page": page_url, "row_count": len(rows), "rows": rows}
 
 
-@mcp.tool()
 def sc_list_sitemaps(site_url: str) -> list[dict[str, Any]]:
-    """Lista sitemaps registrados en Search Console para el site."""
-    svc = _sc_client()
-    resp = svc.sitemaps().list(siteUrl=site_url).execute()
+    """List the sitemaps submitted for a Search Console site, with errors and warnings."""
+    resp = _sc_client().sitemaps().list(siteUrl=site_url).execute()
     return [
         {
             "path": s.get("path"),
@@ -195,112 +154,101 @@ def sc_list_sitemaps(site_url: str) -> list[dict[str, Any]]:
     ]
 
 
-@mcp.tool()
 def sc_submit_sitemap(site_url: str, sitemap_url: str) -> dict[str, str]:
-    """
-    Envía/notifica un sitemap a Google Search Console.
+    """Submit (or resubmit) a sitemap to Search Console.
 
     Args:
-        site_url: 'https://example.com/' o 'sc-domain:example.com'
-        sitemap_url: URL absoluta del sitemap (ej. 'https://example.com/sitemap.xml')
-
-    Necesita scope `webmasters` (no readonly).
+        site_url: 'sc-domain:example.com' or 'https://example.com/'.
+        sitemap_url: absolute URL of the sitemap, e.g. 'https://example.com/sitemap.xml'.
     """
-    svc = _sc_client(write=True)
-    svc.sitemaps().submit(siteUrl=site_url, feedpath=sitemap_url).execute()
+    _sc_client(write=True).sitemaps().submit(siteUrl=site_url, feedpath=sitemap_url).execute()
     return {"submitted": "true", "sitemap": sitemap_url}
 
 
-@mcp.tool()
 def sc_add_site_and_get_verify_token(domain: str) -> dict[str, Any]:
-    """
-    Registra un site (domain-property) en Search Console y devuelve el token
-    DNS_TXT necesario para verificar ownership.
+    """Add a domain property to Search Console and return the DNS TXT record that verifies it.
 
-    **Limitación importante**: para domain-properties (`sc-domain:`), Google
-    Site Verification API **solo acepta `DNS_TXT` o `DNS_CNAME`** como
-    método. ANALYTICS y FILE/META solo funcionan para URL-prefix properties
-    (`https://dominio.com/`). Como domain-property es mejor (cubre www +
-    sin-www + http + https), usamos ese tipo y aceptamos que la verificación
-    requiere agregar un TXT record en DNS.
-
-    El TXT record debe estar en el zone root (name = `@`), tipo TXT,
-    contenido = el token devuelto (incluyendo el prefijo `google-site-
-    verification=`). TTL 120s es suficiente.
-
-    Una vez agregado el TXT y propagado (~30s), llamar `sc_verify_site_dns`
-    para completar.
+    Domain properties ('sc-domain:') cover every subdomain and both http and https, but Google
+    only verifies them over DNS (TXT or CNAME). Add the returned token as a TXT record on the
+    zone root (name '@'), wait for it to propagate, then call sc_verify_site_dns.
+    Safe to call again: an existing site is reported as 'already_exists'.
 
     Args:
-        domain: dominio sin scheme (ej. 'example.com').
+        domain: bare domain without scheme, e.g. 'example.com'.
 
-    Returns dict con `add` (status), `txt_token` (el valor a poner como
-    TXT record), `next_steps` (qué hacer manualmente o vía CF API).
+    Returns `add` (created / already_exists), `txt_token` and `next_steps`.
     """
     site_url = f"sc-domain:{domain}"
     out: dict[str, Any] = {"domain": domain, "site_url": site_url}
-
-    # 1) Add site (idempotente)
-    sc = _sc_client(write=True)
     try:
-        sc.sites().add(siteUrl=site_url).execute()
+        _sc_client(write=True).sites().add(siteUrl=site_url).execute()
         out["add"] = "created"
     except HttpError as e:
-        if e.status_code in (409, 400):
+        if e.status_code in (400, 409):
             out["add"] = "already_exists"
         else:
             out["add"] = f"error_{e.status_code}"
             return out
 
-    # 2) Obtener token DNS_TXT
-    sv = _siteverification_client()
     try:
-        tok = sv.webResource().getToken(body={
-            "site": {"identifier": domain, "type": "INET_DOMAIN"},
-            "verificationMethod": "DNS_TXT",
-        }).execute()
-        out["txt_token"] = tok.get("token")
+        token = dns_txt_token(domain)
+        out["txt_token"] = token
         out["next_steps"] = (
-            f"Agregar TXT record en DNS de {domain}: name='@' content='{tok.get('token')}' ttl=120. "
-            f"Luego llamar sc_verify_site_dns('{domain}')."
+            f"Add a TXT record to the DNS of {domain}: name='@' value='{token}'. "
+            f"Once it resolves (dig TXT {domain} +short), call sc_verify_site_dns('{domain}')."
         )
     except HttpError as e:
         out["txt_token"] = None
         out["error"] = f"{e.status_code}: {str(e._get_reason())[:120]}"
-
     return out
 
 
-@mcp.tool()
 def sc_verify_site_dns(domain: str) -> dict[str, Any]:
-    """
-    Completa la verificación DNS_TXT de un domain-property previamente
-    registrado con `sc_add_site_and_get_verify_token`.
+    """Verify ownership of a domain property whose DNS TXT record is already published.
 
-    Pre-requisito: el TXT record ya está propagado en DNS público del
-    dominio. Validable con `dig TXT <domain> +short`.
+    Run sc_add_site_and_get_verify_token first and wait until `dig TXT <domain> +short`
+    shows the token.
 
     Args:
-        domain: dominio sin scheme (ej. 'example.com').
-
-    Returns dict con resultado de la verificación.
+        domain: bare domain without scheme, e.g. 'example.com'.
     """
-    sv = _siteverification_client()
     try:
-        r = sv.webResource().insert(
-            verificationMethod="DNS_TXT",
-            body={"site": {"identifier": domain, "type": "INET_DOMAIN"}},
-        ).execute()
+        r = (
+            _siteverification_client()
+            .webResource()
+            .insert(
+                verificationMethod="DNS_TXT",
+                body={"site": {"identifier": domain, "type": "INET_DOMAIN"}},
+            )
+            .execute()
+        )
         return {"domain": domain, "verified": True, "owners": r.get("owners", [])}
     except HttpError as e:
-        err = str(e._get_reason())
         return {
             "domain": domain,
             "verified": False,
             "error_code": e.status_code,
-            "error": err[:200],
+            "error": str(e._get_reason())[:200],
             "hint": (
-                "Si dice 'tokenVerifyError': el TXT no se propagó. Esperar 30-60s y reintentar. "
-                "Validar con: dig TXT <domain> +short"
+                "If the error mentions the token, the TXT record has not propagated yet. "
+                "Wait 30-60 seconds and retry; check with: dig TXT <domain> +short"
             ),
         }
+
+
+READ_TOOLS = (
+    sc_list_sites,
+    sc_top_queries,
+    sc_page_performance,
+    sc_query_breakdown_by_page,
+    sc_list_sitemaps,
+)
+WRITE_TOOLS = (sc_submit_sitemap, sc_add_site_and_get_verify_token, sc_verify_site_dns)
+
+
+def register(mcp: FastMCP, *, writes: bool) -> None:
+    for fn in READ_TOOLS:
+        mcp.add_tool(fn, annotations=READ)
+    if writes:
+        for fn in WRITE_TOOLS:
+            mcp.add_tool(fn, annotations=ENSURE)

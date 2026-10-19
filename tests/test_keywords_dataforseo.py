@@ -1,8 +1,4 @@
-"""Tests para el módulo DataForSEO (keywords_dataforseo.py).
-
-Todo mockeado — sin llamadas reales a la API (no hay credenciales todavía
-y no se debe gastar crédito). Se monkeypatchea `requests.post`.
-"""
+"""DataForSEO module tests. Everything is mocked (`requests.post`): no credit is spent."""
 
 from __future__ import annotations
 
@@ -15,10 +11,8 @@ class _FakeResponse:
     def __init__(self, json_data: dict, status: int = 200):
         self._json_data = json_data
         self.status_code = status
-
-    def raise_for_status(self) -> None:
-        if self.status_code >= 400:
-            raise RuntimeError(f"HTTP {self.status_code}")
+        self.ok = status < 400
+        self.reason = "Error" if status >= 400 else "OK"
 
     def json(self) -> dict:
         return self._json_data
@@ -144,7 +138,7 @@ def test_kw_ideas_missing_env_vars_raises_clear_error(monkeypatch):
     monkeypatch.delenv("DATAFORSEO_PASSWORD", raising=False)
 
     def fake_post(*args, **kwargs):
-        raise AssertionError("no debería llamar a la red sin credenciales")
+        raise AssertionError("must not hit the network without credentials")
 
     monkeypatch.setattr(kwds.requests, "post", fake_post)
 
@@ -156,7 +150,7 @@ def test_kw_volume_missing_password_raises_clear_error(monkeypatch):
     monkeypatch.delenv("DATAFORSEO_PASSWORD", raising=False)
 
     def fake_post(*args, **kwargs):
-        raise AssertionError("no debería llamar a la red sin credenciales")
+        raise AssertionError("must not hit the network without credentials")
 
     monkeypatch.setattr(kwds.requests, "post", fake_post)
 

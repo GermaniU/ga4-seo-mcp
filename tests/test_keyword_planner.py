@@ -1,27 +1,11 @@
-"""Tests para el módulo Google Ads Keyword Planner (keyword_planner.py).
+"""Unit tests for the Google Ads Keyword Planner module (keyword_planner.py).
 
-Tests UNITARIOS mockeados — cero llamadas reales a Google Ads (el flujo E2E ya
-se validó con token Basic el 2026-07-18, ver docstring de keyword_planner.py;
-estos tests cubren la lógica pura, independiente del token). Validan:
+No network calls. They cover token handling (a clear RuntimeError before any client is built)
+and the request/response mapping, using REAL protobuf messages from the installed `google-ads`
+package so field names and types are the true ones.
 
-  1. El manejo del token (falta GOOGLE_ADS_DEVELOPER_TOKEN Y archivo dev-token
-     -> RuntimeError claro, ANTES de construir ningún cliente).
-  2. El NORMALIZADOR (`_historical_metrics_to_dict`) y la construcción del
-     request (customer_id sin guiones, geo/language resource names,
-     keyword_plan_network) contra objetos protobuf REALES del paquete
-     `google-ads` instalado — no un mock inventado a mano, así que field-names
-     y tipos son los verdaderos.
-
-El comportamiento del backend real (auth ADC, aceptación del customer_id, y que
-avg_monthly_searches viene bucketed) se validó por smoke E2E, no acá — estos
-tests no tocan la red a propósito.
-
-Se mockea `_client()` COMPLETO (no solo la llamada RPC, a diferencia de
-test_keywords_dataforseo.py que solo mockea `requests.post`) porque construir
-un GoogleAdsClient real dispara `google.auth.default()` contra las
-credenciales ADC reales de esta máquina — hay un riesgo real de disparar
-auth de verdad si solo se mockea la capa de red. DataForSEO no tiene ese
-problema porque su "auth" es solo un tuple de strings sin side-effects.
+`_client()` is mocked as a whole: building a real GoogleAdsClient triggers
+`google.auth.default()` against this machine's real ADC.
 """
 
 from __future__ import annotations
@@ -31,17 +15,21 @@ from types import SimpleNamespace
 
 import pytest
 
-from ga4_seo_mcp import keyword_planner as kp
-from ga4_seo_mcp.keyword_planner import GoogleAdsException
+pytest.importorskip("google.ads.googleads")
 
-# Se usa la MISMA versión default que el cliente real resolvería en runtime
-# (google.ads.googleads.client._DEFAULT_VERSION), para no hardcodear "v24" y
-# quedar desincronizado si el paquete instalado bumpea de versión.
-from google.ads.googleads.client import _DEFAULT_VERSION as _GADS_VERSION
+# Same API version the real client resolves at runtime, so the test follows package upgrades.
+from google.ads.googleads.client import _DEFAULT_VERSION as _GADS_VERSION  # noqa: E402
 
-kpis = import_module(f"google.ads.googleads.{_GADS_VERSION}.services.types.keyword_plan_idea_service")
+from ga4_seo_mcp import keyword_planner as kp  # noqa: E402
+from ga4_seo_mcp.keyword_planner import GoogleAdsException  # noqa: E402
+
+kpis = import_module(
+    f"google.ads.googleads.{_GADS_VERSION}.services.types.keyword_plan_idea_service"
+)
 kpc = import_module(f"google.ads.googleads.{_GADS_VERSION}.common.types.keyword_plan_common")
-kpcl = import_module(f"google.ads.googleads.{_GADS_VERSION}.enums.types.keyword_plan_competition_level")
+kpcl = import_module(
+    f"google.ads.googleads.{_GADS_VERSION}.enums.types.keyword_plan_competition_level"
+)
 kpn = import_module(f"google.ads.googleads.{_GADS_VERSION}.enums.types.keyword_plan_network")
 
 _CompetitionLevel = kpcl.KeywordPlanCompetitionLevelEnum.KeywordPlanCompetitionLevel
@@ -49,11 +37,7 @@ _KeywordPlanNetwork = kpn.KeywordPlanNetworkEnum.KeywordPlanNetwork
 
 
 class _FakeGoogleAdsService:
-    """Fake de GoogleAdsService — solo los path-builders que usa el módulo.
-    Réplica de los formatos reales confirmados por introspección
-    (GoogleAdsServiceClient.geo_target_constant_path/language_constant_path),
-    sin necesitar credenciales ni transport gRPC.
-    """
+    """Only the path builders the module uses, with the real resource-name formats."""
 
     @staticmethod
     def geo_target_constant_path(location_id: str) -> str:
@@ -80,13 +64,8 @@ class _FakeKeywordPlanIdeaService:
 
 
 class _FakeGoogleAdsClient:
-    """Fake de GoogleAdsClient. `get_type` instancia mensajes protobuf REALES
-    del paquete `google-ads` instalado (misma versión default que usaría el
-    cliente real) para que el test verifique field-names verdaderos.
-    `get_service`/`enums` son fakes livianos: instanciar un GoogleAdsServiceClient
-    real dispara validación de transport/credenciales que no queremos en un
-    test unitario.
-    """
+    """`get_type` builds REAL protobuf messages; services and enums are light fakes because a
+    real GoogleAdsServiceClient validates transport and credentials."""
 
     def __init__(self, kpi_service: _FakeKeywordPlanIdeaService):
         self._kpi_service = kpi_service
@@ -97,7 +76,7 @@ class _FakeGoogleAdsClient:
             return _FakeGoogleAdsService()
         if name == "KeywordPlanIdeaService":
             return self._kpi_service
-        raise AssertionError(f"servicio no esperado en el fake: {name}")
+        raise AssertionError(f"unexpected service: {name}")
 
     def get_type(self, name: str):
         return getattr(kpis, name)()
@@ -127,8 +106,7 @@ def _metrics(
 
 def test_kw_ideas_gads_missing_developer_token_raises_clear_error(monkeypatch):
     monkeypatch.delenv("GOOGLE_ADS_DEVELOPER_TOKEN", raising=False)
-    # También neutralizar el fallback por archivo (~/.config/ga4-seo-mcp/dev-token
-    # puede existir en la máquina) para ejercitar "sin token por ninguna vía".
+    # The token file may exist on this machine; disable it to test "no token anywhere".
     monkeypatch.setattr(kp, "_read_token_file", lambda: None)
 
     with pytest.raises(RuntimeError, match="GOOGLE_ADS_DEVELOPER_TOKEN"):
@@ -170,8 +148,7 @@ def test_kw_ideas_gads_normalizes_response_and_builds_request(monkeypatch, _gads
         limit=2,
     )
 
-    # Request bien armado: customer_id sin guiones, geo/language resource
-    # names con el formato real, red default GOOGLE_SEARCH, seeds cargadas.
+    # customer_id without dashes, real geo/language resource names, GOOGLE_SEARCH network.
     req = kpi_service.last_request
     assert req.customer_id == "1234567890"
     assert req.geo_target_constants == ["geoTargetConstants/2484"]
@@ -252,11 +229,7 @@ def test_kw_volume_gads_normalizes_response_and_builds_request(monkeypatch, _gad
 
 
 def test_kw_volume_gads_login_customer_id_normalized(monkeypatch, _gads_env):
-    """Cubre la normalización de GOOGLE_ADS_LOGIN_CUSTOMER_ID (con guiones)
-    dentro de `_client()` — no mockeamos `_client` acá para ejercitar la
-    función real, solo mockeamos `GoogleAdsClient.load_from_dict` (el punto
-    exacto donde se dispararía la resolución de credenciales reales).
-    """
+    """Runs the real `_client()`, mocking only `load_from_dict`, where credentials resolve."""
     captured_config = {}
 
     def fake_load_from_dict(config):
@@ -278,12 +251,7 @@ def test_kw_volume_gads_login_customer_id_normalized(monkeypatch, _gads_env):
 
 
 def test_run_wraps_google_ads_exception(monkeypatch, _gads_env):
-    """`_run()` debe convertir GoogleAdsException en RuntimeError legible, NO
-    dejar pasar el stacktrace de gRPC crudo. GoogleAdsException requiere
-    (error, call, failure, request_id) reales para construirse — acá se arma
-    con Nones/placeholders donde el constructor lo permite, ya que lo único
-    que se ejercita es el manejo de `ex.failure.errors`.
-    """
+    """`_run()` turns GoogleAdsException into a readable RuntimeError, not a raw gRPC trace."""
     err_types = import_module(f"google.ads.googleads.{_GADS_VERSION}.errors.types.errors")
 
     gads_failure = err_types.GoogleAdsFailure(
