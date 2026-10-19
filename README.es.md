@@ -1,20 +1,20 @@
 <!-- mcp-name: io.github.GermaniU/ga4-seo-mcp -->
 
-[English](README.md) · **Español**
+[English](https://github.com/GermaniU/ga4-seo-mcp/blob/main/README.md) · **Español**
 
 # ga4-seo-mcp — la medición de un sitio, de punta a punta, para agentes de IA
 
 > **Deja la medición de un sitio lista de punta a punta: GA4 + Search Console + PageSpeed, con escritura opcional y protegida.**
 > Servidor open source de [Model Context Protocol](https://modelcontextprotocol.io) para Google Analytics 4 y Search Console. La mayoría de los servidores MCP para Google *leen* tus datos; este además **los configura**: propiedad, data stream, key events, custom dimensions, verificación DNS en Search Console, sitemap y una línea base de PageSpeed. Es de solo lectura hasta que tú digas lo contrario.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-stdio_%7C_Streamable_HTTP-green)](https://modelcontextprotocol.io)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/pyproject.toml)
 [![CI](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CONTRIBUTING.md)
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="Un agente audita un sitio público con PageSpeed y planea la configuración de GA4 + Search Console de un sitio nuevo" width="780">
+  <img src="https://raw.githubusercontent.com/GermaniU/ga4-seo-mcp/main/docs/assets/demo.gif" alt="Un agente audita un sitio público con PageSpeed y planea la configuración de GA4 + Search Console de un sitio nuevo" width="780">
 </p>
 
 <p align="center"><sub>Ejecución real: <code>psi_audit</code> sobre un sitio público y <code>bootstrap_site_measurement(apply=False)</code> planeando un sitio nuevo. El script del demo oculta el ID de la cuenta.</sub></p>
@@ -61,7 +61,7 @@ uvx ga4-seo-mcp auth-command --client-id-file=oauth-client.json
 # gcloud auth application-default login --client-id-file=oauth-client.json --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/webmasters.readonly
 ```
 
-Ejecuta el comando que imprime. Google bloquea los permisos de Analytics y Search Console en el cliente OAuth integrado de gcloud, así que necesitas uno propio (se configura una sola vez en unos minutos) **o** una cuenta de servicio. Las dos rutas están en [docs/AUTH.md](docs/AUTH.md).
+Ejecuta el comando que imprime. Google bloquea los permisos de Analytics y Search Console en el cliente OAuth integrado de gcloud, así que necesitas uno propio (se configura una sola vez en unos minutos) **o** una cuenta de servicio. Las dos rutas están en [docs/AUTH.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/AUTH.md).
 
 **3. Revisa todo antes de conectar un cliente** (solo lectura, no cambia nada):
 
@@ -94,7 +94,7 @@ Activa solo lo que necesites con `--toolsets` (o `GA4SEO_TOOLSETS`). Por defecto
 | `dataforseo` | Ideas de keywords y volúmenes exactos de DataForSEO (de pago) | ninguno (`DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`) | — | 2 + 0 |
 | `ads` | Google Ads Keyword Planner (requiere `pip install 'ga4-seo-mcp[ads]'`) | `adwords` | — | 2 + 0 |
 
-Conteos del registro real: **24** tools por defecto, **37** con `--enable-writes`, **8** con `--toolsets data` y **41** con todos los toolsets y escritura. La lista completa está en [docs/TOOLS.md](docs/TOOLS.md) (se genera desde el registro y la CI la verifica).
+Conteos del registro real: **24** tools por defecto, **37** con `--enable-writes`, **8** con `--toolsets data` y **41** con todos los toolsets y escritura. La lista completa está en [docs/TOOLS.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/TOOLS.md) (se genera desde el registro y la CI la verifica).
 
 **Prompts:** `audit_ga4_setup`, `seo_360_audit`, `portfolio_performance_digest` y `launch_site_measurement` (el flujo guiado: plan → tu confirmación → apply → verificación DNS → sitemap → línea base de PageSpeed).
 
@@ -108,7 +108,7 @@ Conteos del registro real: **24** tools por defecto, **37** con `--enable-writes
 
 ## 🔒 Modelo de seguridad
 
-Los valores por defecto son seguros para una persona en su laptop. El detalle y el modelo de amenazas están en [SECURITY.md](SECURITY.md).
+Los valores por defecto son seguros para una persona en su laptop. El detalle y el modelo de amenazas están en [SECURITY.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/SECURITY.md).
 
 - **Solo lectura por defecto.** Sin `--enable-writes` (o `GA4SEO_ENABLE_WRITES=1`), las tools que crean, actualizan, borran, envían o verifican **no se registran**: el modelo no puede llamar lo que no existe.
 - **Anotaciones MCP** en cada tool: `readOnlyHint` en las de lectura, `destructiveHint` en las que borran o sobrescriben, `idempotentHint` donde repetir no hace daño y `openWorldHint` en todas.
@@ -186,7 +186,7 @@ docker run -i --rm --user "$(id -u):$(id -g)" \
 
 | Síntoma | Causa y solución |
 |---|---|
-| `This app is blocked` / `access_denied` en `gcloud ... login` | El cliente integrado de gcloud no puede pedir permisos de Analytics ni de Search Console. Usa tu propio cliente OAuth (`--client-id-file`) y agrégate como **Test User** en su pantalla de consentimiento: [docs/AUTH.md](docs/AUTH.md). |
+| `This app is blocked` / `access_denied` en `gcloud ... login` | El cliente integrado de gcloud no puede pedir permisos de Analytics ni de Search Console. Usa tu propio cliente OAuth (`--client-id-file`) y agrégate como **Test User** en su pantalla de consentimiento: [docs/AUTH.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/AUTH.md). |
 | `cloud-platform scope is required but not requested` | Usa el comando que imprime `ga4-seo-mcp auth-command`: gcloud exige `cloud-platform` en la lista. El servidor nunca lo pide. |
 | `403 ... API has not been used in project` | Habilita Google Analytics Admin API, Google Analytics Data API y Search Console API en tu proyecto de cuota y luego `gcloud auth application-default set-quota-project my-gcp-project`. |
 | `403 ... does not have sufficient permissions for this property` | Agrega tu usuario (o el email de la cuenta de servicio) a la propiedad de GA4 o al sitio de Search Console. |
@@ -202,11 +202,11 @@ docker run -i --rm --user "$(id -u):$(id -g)" \
 
 ## 📚 Documentación
 
-- [docs/AUTH.md](docs/AUTH.md): cliente OAuth propio frente a cuenta de servicio, permisos por toolset y Test Users.
-- [docs/TOOLS.md](docs/TOOLS.md): todas las tools y prompts, generado desde el registro.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): módulos, registro y capas de seguridad.
-- [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md)
+- [docs/AUTH.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/AUTH.md): cliente OAuth propio frente a cuenta de servicio, permisos por toolset y Test Users.
+- [docs/TOOLS.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/TOOLS.md): todas las tools y prompts, generado desde el registro.
+- [docs/ARCHITECTURE.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/ARCHITECTURE.md): módulos, registro y capas de seguridad.
+- [SECURITY.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/SECURITY.md) · [CONTRIBUTING.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CONTRIBUTING.md) · [CHANGELOG.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CHANGELOG.md)
 
 ## 📄 Licencia
 
-[MIT](LICENSE). Sin afiliación ni respaldo de Google. Google Analytics, Search Console y PageSpeed Insights son marcas de Google LLC.
+[MIT](https://github.com/GermaniU/ga4-seo-mcp/blob/main/LICENSE). Sin afiliación ni respaldo de Google. Google Analytics, Search Console y PageSpeed Insights son marcas de Google LLC.

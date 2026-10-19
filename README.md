@@ -1,22 +1,22 @@
 <!-- mcp-name: io.github.GermaniU/ga4-seo-mcp -->
 
-**English** · [Español](README.es.md)
+**English** · [Español](https://github.com/GermaniU/ga4-seo-mcp/blob/main/README.es.md)
 
 # ga4-seo-mcp — site measurement for AI agents, end to end
 
 > **Get a site's measurement ready end to end: GA4 + Search Console + PageSpeed, with optional, guarded writes.**
 > An open source [Model Context Protocol](https://modelcontextprotocol.io) server for Google Analytics 4 & Search Console. Most MCP servers for Google *read* your data; this one can also **set it up**: property, web stream, key events, custom dimensions, Search Console DNS verification, sitemap and a PageSpeed baseline — read-only until you say otherwise.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-stdio_%7C_Streamable_HTTP-green)](https://modelcontextprotocol.io)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/pyproject.toml)
 [![CI](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CONTRIBUTING.md)
 
 **Tags:** `mcp-server` · `ga4` · `google-analytics` · `search-console` · `seo` · `pagespeed` · `core-web-vitals` · `keyword-research` · `claude-code` · `cursor`
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="An agent audits a public site with PageSpeed and plans the GA4 + Search Console setup of a new site" width="780">
+  <img src="https://raw.githubusercontent.com/GermaniU/ga4-seo-mcp/main/docs/assets/demo.gif" alt="An agent audits a public site with PageSpeed and plans the GA4 + Search Console setup of a new site" width="780">
 </p>
 
 <p align="center"><sub>Real run: <code>psi_audit</code> on a public site and <code>bootstrap_site_measurement(apply=False)</code> planning a new site. The demo script redacts the account ID.</sub></p>
@@ -63,7 +63,7 @@ uvx ga4-seo-mcp auth-command --client-id-file=oauth-client.json
 # gcloud auth application-default login --client-id-file=oauth-client.json --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/webmasters.readonly
 ```
 
-Run the printed command. Google blocks Analytics and Search Console scopes on gcloud's built-in OAuth client, so you need your own (a one-time, few-minute setup) **or** a service account — both are explained in [docs/AUTH.md](docs/AUTH.md).
+Run the printed command. Google blocks Analytics and Search Console scopes on gcloud's built-in OAuth client, so you need your own (a one-time, few-minute setup) **or** a service account — both are explained in [docs/AUTH.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/AUTH.md).
 
 **3. Check everything before connecting a client** (read-only, changes nothing):
 
@@ -104,7 +104,7 @@ Enable only what you need with `--toolsets` (or `GA4SEO_TOOLSETS`). Default: `ad
 | `dataforseo` | DataForSEO keyword ideas and exact volumes (paid) | none (`DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`) | — | 2 + 0 |
 | `ads` | Google Ads Keyword Planner (needs `pip install 'ga4-seo-mcp[ads]'`) | `adwords` | — | 2 + 0 |
 
-Tool counts from the real registry: **24** with the defaults, **37** with `--enable-writes`, **8** with `--toolsets data`, **41** with every toolset and writes. The full list with descriptions is in [docs/TOOLS.md](docs/TOOLS.md) (generated from the registry and checked in CI).
+Tool counts from the real registry: **24** with the defaults, **37** with `--enable-writes`, **8** with `--toolsets data`, **41** with every toolset and writes. The full list with descriptions is in [docs/TOOLS.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/TOOLS.md) (generated from the registry and checked in CI).
 
 **Prompts:** `audit_ga4_setup`, `seo_360_audit`, `portfolio_performance_digest` and `launch_site_measurement` (the guided flow: plan → your confirmation → apply → DNS verification → sitemap → PageSpeed baseline).
 
@@ -125,7 +125,7 @@ bootstrap_site_measurement(site_url="https://example.com", account_id="123456789
 
 ## 🔒 Security model
 
-Defaults are safe for a single user on a laptop. Details and threat model: [SECURITY.md](SECURITY.md).
+Defaults are safe for a single user on a laptop. Details and threat model: [SECURITY.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/SECURITY.md).
 
 - **Read-only by default.** Without `--enable-writes` (or `GA4SEO_ENABLE_WRITES=1`), tools that create, update, delete, submit or verify **are not registered at all** — the model cannot call what does not exist.
 - **MCP annotations** on every tool: `readOnlyHint` on reads, `destructiveHint` on deletes and updates, `idempotentHint` where repeating is harmless, `openWorldHint` everywhere. Clients that honor them can auto-approve reads and ask before writes.
@@ -152,7 +152,7 @@ Defaults are safe for a single user on a laptop. Details and threat model: [SECU
 | `MCP_CORS_ORIGINS` | — | Comma-separated exact origins for a browser client. Never `*`. |
 | `MCP_ALLOWED_HOSTS` | — | Comma-separated host/IP values clients use (e.g. `192.168.1.10`). Required when binding `0.0.0.0` and connecting over the LAN; DNS-rebinding protection rejects everything else with `421`. |
 
-Copy [.env.example](.env.example) as a starting point.
+Copy [.env.example](https://github.com/GermaniU/ga4-seo-mcp/blob/main/.env.example) as a starting point.
 
 ---
 
@@ -218,7 +218,7 @@ MCP_AUTH_TOKEN=$(openssl rand -hex 32) uvx ga4-seo-mcp --transport streamable-ht
 
 | Symptom | Cause and fix |
 |---|---|
-| `This app is blocked` / `access_denied` during `gcloud ... login` | gcloud's built-in client cannot request Analytics or Search Console scopes. Use your own OAuth client (`--client-id-file`) and add yourself as a **Test User** of its consent screen — [docs/AUTH.md](docs/AUTH.md). |
+| `This app is blocked` / `access_denied` during `gcloud ... login` | gcloud's built-in client cannot request Analytics or Search Console scopes. Use your own OAuth client (`--client-id-file`) and add yourself as a **Test User** of its consent screen — [docs/AUTH.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/AUTH.md). |
 | `cloud-platform scope is required but not requested` | Use the command printed by `ga4-seo-mcp auth-command`: gcloud needs `cloud-platform` in the list. The server itself never requests it. |
 | `403 ... API has not been used in project` | Enable the Google Analytics Admin API, Google Analytics Data API and Search Console API in your quota project, then `gcloud auth application-default set-quota-project my-gcp-project`. |
 | `403 ... does not have sufficient permissions for this property` | Add your user (or the service account email) to the GA4 property or Search Console site. |
@@ -234,10 +234,10 @@ MCP_AUTH_TOKEN=$(openssl rand -hex 32) uvx ga4-seo-mcp --transport streamable-ht
 
 ## 📚 Documentation
 
-- [docs/AUTH.md](docs/AUTH.md) — own OAuth client vs service account, scopes per toolset, Test Users.
-- [docs/TOOLS.md](docs/TOOLS.md) — every tool and prompt, generated from the registry.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — modules, registration and security layers.
-- [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md)
+- [docs/AUTH.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/AUTH.md) — own OAuth client vs service account, scopes per toolset, Test Users.
+- [docs/TOOLS.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/TOOLS.md) — every tool and prompt, generated from the registry.
+- [docs/ARCHITECTURE.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/docs/ARCHITECTURE.md) — modules, registration and security layers.
+- [SECURITY.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/SECURITY.md) · [CONTRIBUTING.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CONTRIBUTING.md) · [CHANGELOG.md](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CHANGELOG.md)
 
 ## 🧪 Development
 
@@ -249,4 +249,4 @@ uv run python scripts/smoke_stdio.py --expect 24   # real stdio initialize + too
 
 ## 📄 License
 
-[MIT](LICENSE). Not affiliated with or endorsed by Google. Google Analytics, Search Console and PageSpeed Insights are trademarks of Google LLC.
+[MIT](https://github.com/GermaniU/ga4-seo-mcp/blob/main/LICENSE). Not affiliated with or endorsed by Google. Google Analytics, Search Console and PageSpeed Insights are trademarks of Google LLC.
