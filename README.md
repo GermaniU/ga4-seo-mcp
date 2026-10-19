@@ -42,6 +42,12 @@ Launching a site means the same chores every time: create the GA4 property and i
 
 <sub>Based on each project's README on 2026-10-19; "—" means we did not find it documented. Corrections welcome. Those projects go wider than this one (Bing, AdSense, WordPress, GEO audits…); this one goes deeper on **setting up** measurement.</sub>
 
+## 🤝 Need this done for you?
+
+This server is built and maintained by [Germani Uicab](https://serverstack.solutions/germani?utm_source=github&utm_medium=readme&utm_campaign=ga4-seo-mcp-en). If you'd rather not run it yourself, [ServerStack Solutions](https://serverstack.solutions/germani?utm_source=github&utm_medium=readme&utm_campaign=ga4-seo-mcp-en) can get your GA4 + Search Console measurement ready: a written plan, property and key events configured, the DNS verification and sitemap in place, and a PageSpeed baseline — with a QA pass before handover.
+
+---
+
 Extras: optional keyword research with **DataForSEO** (exact long-tail volumes) and **Google Ads Keyword Planner** (free, bucketed volumes), with `es-MX` defaults that you can override.
 
 ---

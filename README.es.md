@@ -44,6 +44,12 @@ Extras: keyword research opcional con **DataForSEO** (volúmenes exactos de long
 
 ---
 
+## 🤝 ¿Que te lo dejen configurado?
+
+Este servidor lo construye y mantiene [Germani Uicab](https://serverstack.solutions/germani?utm_source=github&utm_medium=readme&utm_campaign=ga4-seo-mcp-es). Si prefieres no hacerlo tú mismo, [ServerStack Solutions](https://serverstack.solutions/germani?utm_source=github&utm_medium=readme&utm_campaign=ga4-seo-mcp-es) deja la medición de tu sitio lista: plan por escrito, propiedad GA4 y eventos clave configurados, verificación DNS y sitemap en Search Console, y línea base de PageSpeed, con QA antes de entregar.
+
+---
+
 ## ⚡ Inicio rápido
 
 **1. Instala [`uv`](https://docs.astral.sh/uv/)**: el cliente lanza el servidor con `uvx`, no hace falta instalar nada más.
