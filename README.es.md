@@ -130,9 +130,10 @@ Los valores por defecto son seguros para una persona en su laptop. El detalle y 
 | `GOOGLE_ADS_DEVELOPER_TOKEN` | — | Toolset `ads`, o `~/.config/ga4-seo-mcp/dev-token` con `chmod 600`. |
 | `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | — | Solo si operas a través de una cuenta de administrador (MCC). |
 | `MCP_TRANSPORT` | `stdio` | `stdio`, `streamable-http` o `sse`. |
-| `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` | Dirección y puerto HTTP. Una dirección que no sea loopback se agrega a los `Host` permitidos. |
+| `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` | Dirección y puerto HTTP. Una dirección concreta que no sea loopback se agrega a los `Host` permitidos; `0.0.0.0` no, así que para clientes en la LAN define `MCP_ALLOWED_HOSTS`. |
 | `MCP_AUTH_TOKEN` | — | Exige `Authorization: Bearer <token>` en cada petición HTTP. |
 | `MCP_CORS_ORIGINS` | — | Orígenes exactos, separados por coma, para un cliente en el navegador. Nunca `*`. |
+| `MCP_ALLOWED_HOSTS` | — | Hosts o IPs que usan tus clientes, separados por coma (p. ej. `192.168.1.10`). Hace falta al escuchar en `0.0.0.0` y conectar por la LAN; el resto recibe `421`. |
 
 ---
 
@@ -194,7 +195,7 @@ docker run -i --rm --user "$(id -u):$(id -g)" \
 | `PageSpeed Insights error 429` | La cuota anónima es compartida. Crea una API key y define `PAGESPEED_API_KEY`. |
 | Los volúmenes de Keyword Planner salen redondeados (10, 30, 170, 210…) | Google Ads da volumen **por rangos** a las cuentas sin gasto activo. Usa el toolset `dataforseo` para números exactos. |
 | Una propiedad borrada sigue apareciendo | `delete_property` es un borrado suave: Google la guarda en la papelera **35 días** (`list_properties(include_deleted=True)`). |
-| HTTP responde `421 Invalid Host header` | Es la protección contra DNS rebinding. Conéctate con el host al que hiciste bind (`127.0.0.1`/`localhost` o la dirección de `MCP_HOST`). |
+| HTTP responde `421 Invalid Host header` | Es la protección contra DNS rebinding. Conéctate con el host al que hiciste bind (`127.0.0.1`/`localhost` o la dirección de `MCP_HOST`); si escuchas en `0.0.0.0`, agrega la IP o nombre que usan tus clientes a `MCP_ALLOWED_HOSTS`. |
 | HTTP responde `401` | Envía `Authorization: Bearer $MCP_AUTH_TOKEN`. |
 
 ---

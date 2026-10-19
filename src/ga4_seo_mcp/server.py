@@ -158,12 +158,16 @@ def main(argv=None) -> None:
     from .http_security import build_http_app
 
     cors = [o.strip() for o in os.environ.get("MCP_CORS_ORIGINS", "").split(",") if o.strip()]
+    allowed_hosts = [
+        h.strip() for h in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()
+    ]
     app = build_http_app(
         mcp,
         args.transport,
         host=args.host,
         auth_token=os.environ.get("MCP_AUTH_TOKEN") or None,
         cors_origins=cors,
+        allowed_hosts=allowed_hosts,
     )
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 

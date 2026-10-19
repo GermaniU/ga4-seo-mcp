@@ -130,7 +130,7 @@ Defaults are safe for a single user on a laptop. Details and threat model: [SECU
 - **Read-only by default.** Without `--enable-writes` (or `GA4SEO_ENABLE_WRITES=1`), tools that create, update, delete, submit or verify **are not registered at all** — the model cannot call what does not exist.
 - **MCP annotations** on every tool: `readOnlyHint` on reads, `destructiveHint` on deletes and updates, `idempotentHint` where repeating is harmless, `openWorldHint` everywhere. Clients that honor them can auto-approve reads and ask before writes.
 - **Minimum scopes**: each Google client requests only the scope of the call it makes; `auth-command` asks only for the scopes of your toolsets.
-- **HTTP transport** (`--transport streamable-http`): binds to `127.0.0.1`, DNS-rebinding protection on, CORS off unless `MCP_CORS_ORIGINS`, and an optional bearer token `MCP_AUTH_TOKEN` (401 without it). Listening on `0.0.0.0` without a token prints a warning.
+- **HTTP transport** (`--transport streamable-http`): binds to `127.0.0.1`, DNS-rebinding protection on, CORS off unless `MCP_CORS_ORIGINS`, and an optional bearer token `MCP_AUTH_TOKEN` (401 without it). Listening on `0.0.0.0` without a token prints a warning, and LAN clients need `MCP_ALLOWED_HOSTS` or the rebinding protection answers `421`.
 - **Secrets** (DataForSEO, Ads developer token, PageSpeed key) come only from environment variables or a `chmod 600` file, and are never logged or returned in errors.
 
 ---
@@ -147,9 +147,10 @@ Defaults are safe for a single user on a laptop. Details and threat model: [SECU
 | `GOOGLE_ADS_DEVELOPER_TOKEN` | — | `ads` toolset, or `~/.config/ga4-seo-mcp/dev-token` with `chmod 600`. |
 | `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | — | Only when operating through a manager (MCC) account. |
 | `MCP_TRANSPORT` | `stdio` | `stdio`, `streamable-http` or `sse`. |
-| `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` | HTTP bind address and port. A non-loopback address is added to the allowed `Host` headers. |
+| `MCP_HOST` / `MCP_PORT` | `127.0.0.1` / `8000` | HTTP bind address and port. A specific non-loopback address is added to the allowed `Host` headers; `0.0.0.0` is not, so set `MCP_ALLOWED_HOSTS` for LAN clients. |
 | `MCP_AUTH_TOKEN` | — | Require `Authorization: Bearer <token>` on every HTTP request. |
 | `MCP_CORS_ORIGINS` | — | Comma-separated exact origins for a browser client. Never `*`. |
+| `MCP_ALLOWED_HOSTS` | — | Comma-separated host/IP values clients use (e.g. `192.168.1.10`). Required when binding `0.0.0.0` and connecting over the LAN; DNS-rebinding protection rejects everything else with `421`. |
 
 Copy [.env.example](.env.example) as a starting point.
 

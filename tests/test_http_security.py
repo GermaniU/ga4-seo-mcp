@@ -19,9 +19,16 @@ INIT = {
 HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
 
 
-def _client(host="127.0.0.1", token=None, cors=None):
+def _client(host="127.0.0.1", token=None, cors=None, allowed_hosts=None):
     mcp = build_server(("psi",), writes=False)
-    app = build_http_app(mcp, "streamable-http", host=host, auth_token=token, cors_origins=cors)
+    app = build_http_app(
+        mcp,
+        "streamable-http",
+        host=host,
+        auth_token=token,
+        cors_origins=cors,
+        allowed_hosts=allowed_hosts,
+    )
     return TestClient(app, base_url="http://127.0.0.1:8000")
 
 
@@ -61,6 +68,19 @@ def test_non_local_host_is_added_to_allowed_hosts():
 
 def test_initialize_ok_without_token():
     assert _post(_client()).status_code == 200
+
+
+def test_allowed_hosts_env_lets_lan_clients_in(monkeypatch):
+    # El caso real: bindear 0.0.0.0 y que el cliente conecte por la IP de la LAN.
+    client = _client(host="0.0.0.0", allowed_hosts=["192.0.2.10"])
+    resp = _post(client, headers={"Host": "192.0.2.10:8200"})
+    assert resp.status_code == 200
+
+
+def test_all_interfaces_without_allowed_hosts_warns(monkeypatch, capsys):
+    _client(host="0.0.0.0")
+    err = capsys.readouterr().err
+    assert "MCP_ALLOWED_HOSTS" in err
 
 
 def test_rebinding_host_header_rejected():
