@@ -99,10 +99,17 @@ async def main() -> None:
 
                 summaries = payload(await session.call_tool("list_account_summaries", {}))
                 account_id = summaries[0]["account_id"]
-                call_line(
-                    "bootstrap_site_measurement",
-                    f"site_url={NEW_SITE!r}, account_id='•••••', apply=False",
+                # La llamada va completa: si se omite un argumento, quien la copie
+                # obtiene otro plan. En varias lineas porque una sola no cabe.
+                say(f"{CYAN}> bootstrap_site_measurement({RESET}", 0.2)
+                say(f"{CYAN}    site_url={NEW_SITE!r}, account_id='•••••',{RESET}", 0.2)
+                say(f"{CYAN}    key_events=['generate_lead'],{RESET}", 0.2)
+                say(
+                    f"{CYAN}    custom_dimensions=[{{'parameter_name': 'plan_type',"
+                    f" 'display_name': 'Plan type'}}],{RESET}",
+                    0.2,
                 )
+                say(f"{CYAN}    apply=False){RESET}", 0.3)
                 plan = payload(
                     await session.call_tool(
                         "bootstrap_site_measurement",
