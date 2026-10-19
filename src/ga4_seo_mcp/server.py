@@ -1,83 +1,172 @@
-"""
-Servidor MCP para Google Marketing Stack (Analytics + Search Console + PageSpeed).
-
-Entry point: importa todos los módulos de tools para que se registren contra la
-instancia FastMCP compartida en `mcp_app.py`, luego corre `mcp.run()` por stdio.
-
-Auth:
-- GA Admin/Data + Search Console + Google Ads: Application Default Credentials.
-  Scopes requeridos: analytics.edit + analytics.readonly + webmasters + siteverification + cloud-platform + adwords.
-  Setup: bash scripts/auth-v2.sh
-- PageSpeed: API pública. Opcional env PAGESPEED_API_KEY para mayor cuota.
-- DataForSEO: HTTP Basic Auth vía env vars DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD.
-- Google Ads (Keyword Planner): ADC + env var GOOGLE_ADS_DEVELOPER_TOKEN
-  obligatoria (opcional GOOGLE_ADS_LOGIN_CUSTOMER_ID si es cuenta MCC).
-  Ver docstring de keyword_planner.py para el detalle de qué está validado.
-"""
+"""ga4-seo-mcp: CLI entry point and server assembly."""
 
 from __future__ import annotations
 
-# Importar módulos: el side-effect es que cada @mcp.tool() se registre
-# en la instancia compartida `mcp` de mcp_app.
 import argparse
+import importlib
 import os
+import sys
 
-from . import admin       # noqa: F401  Admin API (config GA4)
-from . import data        # noqa: F401  Data API (lectura métricas GA4)
-from . import search_console  # noqa: F401  Search Console (SEO queries, pages)
-from . import pagespeed   # noqa: F401  PageSpeed Insights + CrUX
-from . import keywords_dataforseo  # noqa: F401  DataForSEO keyword research
-from . import keyword_planner  # noqa: F401  Google Ads Keyword Planner
-from . import prompts     # noqa: F401  MCP Prompts (plantillas predefinidas)
+from mcp.server.fastmcp import FastMCP
 
-from .mcp_app import mcp
+from . import __version__, admin, bootstrap, data, pagespeed, prompts, search_console
+from .scopes import TOOLSETS, auth_command, parse_toolsets
+
+INSTRUCTIONS = """\
+Tools for Google Analytics 4, Search Console and PageSpeed Insights.
+- Start with list_account_summaries (GA4) or sc_list_sites (Search Console) to find IDs.
+- Search Console data lags 2-3 days; GA4 realtime covers the last 30 minutes.
+- To set up a new site, use bootstrap_site_measurement with apply=False first, show the plan to
+  the user, and only apply it after explicit confirmation.
+- Tools that change configuration only exist when the server runs with --enable-writes."""
+
+WRITE_TOOLS = frozenset(
+    [fn.__name__ for fn in admin.WRITE_TOOLS] + [fn.__name__ for fn in search_console.WRITE_TOOLS]
+)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="GA Admin MCP Server (Google Marketing Stack)")
+def _optional_module(toolset: str):
+    if toolset == "dataforseo":
+        return importlib.import_module(".keywords_dataforseo", __package__)
+    try:
+        return importlib.import_module(".keyword_planner", __package__)
+    except ImportError as exc:
+        raise SystemExit(
+            "The 'ads' toolset needs the google-ads package: pip install 'ga4-seo-mcp[ads]'"
+        ) from exc
+
+
+def build_server(toolsets, *, writes: bool) -> FastMCP:
+    """A FastMCP server with only the tools of the enabled toolsets (writes only if asked)."""
+    mcp = FastMCP("ga4-seo-mcp", instructions=INSTRUCTIONS)
+    # FastMCP has no version argument and would report the MCP SDK version in serverInfo.
+    mcp._mcp_server.version = __version__
+    if "admin" in toolsets:
+        admin.register(mcp, writes=writes)
+        bootstrap.register(mcp, writes=writes, gsc="gsc" in toolsets)
+    if "data" in toolsets:
+        data.register(mcp, writes=writes)
+    if "gsc" in toolsets:
+        search_console.register(mcp, writes=writes)
+    if "psi" in toolsets:
+        pagespeed.register(mcp, writes=writes)
+    for name in ("dataforseo", "ads"):
+        if name in toolsets:
+            _optional_module(name).register(mcp, writes=writes)
+    prompts.register(mcp)
+    return mcp
+
+
+def _toolsets_arg(raw: str) -> tuple[str, ...]:
+    try:
+        return parse_toolsets(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def parse_args(argv=None) -> argparse.Namespace:
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--toolsets",
+        type=_toolsets_arg,
+        default=argparse.SUPPRESS,
+        help=f"comma-separated subset of {','.join(TOOLSETS)} "
+        "(env GA4SEO_TOOLSETS, default admin,data,gsc,psi)",
+    )
+    common.add_argument(
+        "--enable-writes",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="register tools that create, update, delete, submit or verify "
+        "(env GA4SEO_ENABLE_WRITES=1). Off by default.",
+    )
+
+    parser = argparse.ArgumentParser(
+        prog="ga4-seo-mcp",
+        description="MCP server for Google Analytics 4, Search Console and PageSpeed Insights.",
+        parents=[common],
+    )
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument(
         "--transport",
         choices=["stdio", "sse", "streamable-http"],
         default=os.environ.get("MCP_TRANSPORT", "stdio"),
-        help="Transport type: stdio (default), sse, or streamable-http",
+        help="stdio (default), streamable-http or sse (env MCP_TRANSPORT)",
     )
     parser.add_argument(
         "--host",
-        default=os.environ.get("MCP_HOST", "0.0.0.0"),
-        help="Host interface for SSE/HTTP transport (default: 0.0.0.0)",
+        default=os.environ.get("MCP_HOST", "127.0.0.1"),
+        help="HTTP bind address (env MCP_HOST, default 127.0.0.1)",
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("MCP_PORT", "8772")),
-        help="Port for SSE/HTTP transport (default: 8772)",
+        default=int(os.environ.get("MCP_PORT", "8000")),
+        help="HTTP port (env MCP_PORT, default 8000)",
     )
-    args, _ = parser.parse_known_args()
 
-    if args.transport in ("sse", "streamable-http"):
-        mcp.settings.host = args.host
-        mcp.settings.port = args.port
+    sub = parser.add_subparsers(dest="command", metavar="{auth-command,doctor}")
+    auth = sub.add_parser(
+        "auth-command",
+        parents=[common],
+        help="print the gcloud login command with the minimum scopes",
+    )
+    auth.add_argument(
+        "--client-id-file",
+        help="your own OAuth client JSON (Desktop app); Google blocks Analytics and Search "
+        "Console scopes on gcloud's built-in client",
+    )
+    sub.add_parser(
+        "doctor",
+        parents=[common],
+        help="check credentials, token scopes and which APIs answer (read-only)",
+    )
 
-        # FastMCP no agrega CORS por default: un cliente MCP corriendo en un
-        # browser (ej. webui de llama.cpp) hace fetch/EventSource cross-origin
-        # y sin Access-Control-Allow-Origin en la respuesta real (no solo en el
-        # preflight OPTIONS) el browser descarta la respuesta como fallo de red.
-        import uvicorn
-        from starlette.middleware.cors import CORSMiddleware
+    args = parser.parse_args(argv)
+    if not hasattr(args, "toolsets"):
+        try:
+            args.toolsets = parse_toolsets(os.environ.get("GA4SEO_TOOLSETS"))
+        except ValueError as exc:
+            parser.error(f"GA4SEO_TOOLSETS: {exc}")
+    if not hasattr(args, "enable_writes"):
+        args.enable_writes = _env_flag("GA4SEO_ENABLE_WRITES")
+    return args
 
-        raw_app = mcp.sse_app() if args.transport == "sse" else mcp.streamable_http_app()
-        app = CORSMiddleware(
-            raw_app,
-            allow_origins=["*"],
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-        uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+
+def main(argv=None) -> None:
+    args = parse_args(argv)
+
+    if args.command == "auth-command":
+        print(auth_command(args.toolsets, args.enable_writes, args.client_id_file))
+        return
+    if args.command == "doctor":
+        from .doctor import run_doctor
+
+        sys.exit(run_doctor(args.toolsets, args.enable_writes))
+
+    mcp = build_server(args.toolsets, writes=args.enable_writes)
+    if args.transport == "stdio":
+        mcp.run(transport="stdio")
         return
 
-    mcp.run(transport=args.transport)
+    import uvicorn
+
+    from .http_security import build_http_app
+
+    cors = [o.strip() for o in os.environ.get("MCP_CORS_ORIGINS", "").split(",") if o.strip()]
+    app = build_http_app(
+        mcp,
+        args.transport,
+        host=args.host,
+        auth_token=os.environ.get("MCP_AUTH_TOKEN") or None,
+        cors_origins=cors,
+    )
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
 if __name__ == "__main__":
     main()
-

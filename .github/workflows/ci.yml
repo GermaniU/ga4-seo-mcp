@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (ruff) and docs drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.12"
+
+      - run: uv sync --locked --all-extras
+
+      - run: uv run ruff check .
+
+      - run: uv run ruff format --check .
+
+      # docs/TOOLS.md is generated from the live registry; fail if someone forgot to regenerate it.
+      - run: uv run python scripts/gen_tools_doc.py --check
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: uv sync --locked --all-extras
+
+      - run: uv run pytest
+
+      - name: Smoke stdio (initialize + tools/list) per toolset combination
+        run: |
+          uv run python scripts/smoke_stdio.py --expect 24
+          uv run python scripts/smoke_stdio.py --expect 37 -- --enable-writes
+          uv run python scripts/smoke_stdio.py --expect 8 -- --toolsets data
+          uv run python scripts/smoke_stdio.py --expect 41 -- --toolsets admin,data,gsc,psi,dataforseo,ads --enable-writes
+
+  package:
+    name: Build and install the wheel in a clean venv
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.12"
+
+      - run: uv build
+
+      - name: Install the wheel in a fresh venv and run the CLI
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install --quiet dist/*.whl
+          /tmp/clean/bin/ga4-seo-mcp --version
+          /tmp/clean/bin/ga4-seo-mcp --help > /dev/null
+          /tmp/clean/bin/ga4-seo-mcp auth-command
+          # No credentials on the runner: doctor must fail cleanly (exit 1), not crash.
+          set +e; /tmp/clean/bin/ga4-seo-mcp doctor; code=$?; set -e
+          test "$code" = "1"
+          /tmp/clean/bin/python scripts/smoke_stdio.py --expect 24 --command /tmp/clean/bin/ga4-seo-mcp
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: docker build -t ga4-seo-mcp:ci .
+
+      # The MCP Registry rejects the image if the label does not match server.json.
+      - name: Registry label matches server.json
+        run: |
+          label="$(docker inspect -f '{{ index .Config.Labels "io.modelcontextprotocol.server.name" }}' ga4-seo-mcp:ci)"
+          echo "label=$label server.json=$(jq -r .name server.json)"
+          test "$label" = "$(jq -r .name server.json)"
+
+      - name: Runs as a non-root user
+        run: test "$(docker run --rm --entrypoint id ga4-seo-mcp:ci -u)" != "0"
+
+      # How stdio clients (and the MCP Registry) launch it: `docker run -i --rm <image>`.
+      # When stdin closes the server exits, so the job does not hang.
+      - name: Smoke stdio (initialize + tools/list)
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            | timeout 60 docker run -i --rm ga4-seo-mcp:ci > stdio.out
+          cat stdio.out
+          grep -q '"serverInfo"' stdio.out
+          test "$(jq -s '[.[] | select(.id == 2)][0].result.tools | length' stdio.out)" = "24"
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks over the full history
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar xz gitleaks
+          ./gitleaks git . --redact --no-banner --verbose

@@ -1,10 +1,4 @@
-"""
-Tools del MCP para Google Analytics Data API (lectura de métricas GA4).
-
-Cubre: reportes flexibles, top pages, eventos, real-time, fuentes de tráfico.
-Requiere scope ADC: analytics.readonly (o analytics.edit que lo incluye).
-API: analyticsdata.googleapis.com
-"""
+"""GA4 Data API tools: reports, realtime, top pages, events, traffic sources."""
 
 from __future__ import annotations
 
@@ -19,12 +13,15 @@ from google.analytics.data_v1beta.types import (
     RunRealtimeReportRequest,
     RunReportRequest,
 )
+from mcp.server.fastmcp import FastMCP
 
-from .mcp_app import mcp
+from .annotations import READ
+from .auth import credentials
+from .scopes import ANALYTICS_READONLY
 
 
 def _data_client() -> BetaAnalyticsDataClient:
-    return BetaAnalyticsDataClient()
+    return BetaAnalyticsDataClient(credentials=credentials(ANALYTICS_READONLY))
 
 
 def _norm_property(property_id: str) -> str:
@@ -37,7 +34,6 @@ def _row_to_dict(row, dim_names: list[str], met_names: list[str]) -> dict[str, A
         out[name] = row.dimension_values[i].value
     for i, name in enumerate(met_names):
         val = row.metric_values[i].value
-        # Try numeric coercion
         try:
             out[name] = float(val) if "." in val else int(val)
         except (ValueError, AttributeError):
@@ -45,7 +41,6 @@ def _row_to_dict(row, dim_names: list[str], met_names: list[str]) -> dict[str, A
     return out
 
 
-@mcp.tool()
 def run_report(
     property_id: str,
     metrics: list[str],
@@ -56,24 +51,22 @@ def run_report(
     order_by_metric: str | None = None,
     order_desc: bool = True,
 ) -> dict[str, Any]:
-    """
-    Corre un reporte de GA4 flexible.
+    """Run a flexible GA4 report.
 
     Args:
-        property_id: id numérico o 'properties/...'
-        metrics: lista de métricas (ej. ['sessions','activeUsers','conversions']).
-            Catálogo: https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#metrics
-        dimensions: opcional (ej. ['date','sessionSource','pagePath']).
-            Catálogo: https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#dimensions
-        date_start: 'YYYY-MM-DD', 'today', 'yesterday', '7daysAgo', '30daysAgo'…
-        date_end: igual que date_start.
-        limit: filas máximas (default 25).
-        order_by_metric: ordenar por esta métrica (ej. 'sessions').
-        order_desc: descendente si True.
+        property_id: numeric ID or 'properties/123456789'.
+        metrics: e.g. ['sessions', 'activeUsers', 'keyEvents']. Catalog:
+            https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#metrics
+        dimensions: optional, e.g. ['date', 'sessionSource', 'pagePath']. Catalog:
+            https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema#dimensions
+        date_start: 'YYYY-MM-DD', 'today', 'yesterday' or 'NdaysAgo' (e.g. '28daysAgo').
+        date_end: same formats as date_start.
+        limit: maximum rows (default 25).
+        order_by_metric: sort by this metric, e.g. 'sessions'.
+        order_desc: sort descending (default True).
 
-    Returns dict con `dimensions`, `metrics`, `rows` (lista) y `row_count`.
+    Returns the dimension and metric names, the date range, row_count and the rows.
     """
-    client = _data_client()
     dim_names = dimensions or []
     req = RunReportRequest(
         property=_norm_property(property_id),
@@ -83,35 +76,34 @@ def run_report(
         limit=limit,
     )
     if order_by_metric:
-        req.order_bys = [OrderBy(metric=OrderBy.MetricOrderBy(metric_name=order_by_metric), desc=order_desc)]
-    resp = client.run_report(request=req)
-    rows = [_row_to_dict(r, dim_names, metrics) for r in resp.rows]
+        req.order_bys = [
+            OrderBy(metric=OrderBy.MetricOrderBy(metric_name=order_by_metric), desc=order_desc)
+        ]
+    resp = _data_client().run_report(request=req)
     return {
         "property_id": property_id,
         "dimensions": dim_names,
         "metrics": metrics,
         "date_range": {"start": date_start, "end": date_end},
         "row_count": resp.row_count,
-        "rows": rows,
+        "rows": [_row_to_dict(r, dim_names, metrics) for r in resp.rows],
     }
 
 
-@mcp.tool()
 def run_realtime_report(
     property_id: str,
     metrics: list[str] | None = None,
     dimensions: list[str] | None = None,
     limit: int = 25,
 ) -> dict[str, Any]:
-    """
-    Real-time report (últimos 30 minutos). Útil para VALIDAR que un evento
-    nuevo dispara en producción tras un deploy.
+    """Realtime report for the last 30 minutes.
+
+    Useful to confirm that a new event fires in production right after a deploy.
 
     Args:
-        metrics: default ['activeUsers']. También 'eventCount'.
-        dimensions: default ['eventName']. Útiles: 'unifiedScreenName', 'country', 'deviceCategory'.
+        metrics: default ['activeUsers']; 'eventCount' also works.
+        dimensions: default ['eventName']; also 'unifiedScreenName', 'country', 'deviceCategory'.
     """
-    client = _data_client()
     dim_names = dimensions or ["eventName"]
     met_names = metrics or ["activeUsers"]
     req = RunRealtimeReportRequest(
@@ -120,27 +112,21 @@ def run_realtime_report(
         metrics=[Metric(name=m) for m in met_names],
         limit=limit,
     )
-    resp = client.run_realtime_report(request=req)
-    rows = [_row_to_dict(r, dim_names, met_names) for r in resp.rows]
+    resp = _data_client().run_realtime_report(request=req)
     return {
         "property_id": property_id,
         "row_count": resp.row_count,
-        "rows": rows,
+        "rows": [_row_to_dict(r, dim_names, met_names) for r in resp.rows],
     }
 
 
-@mcp.tool()
 def top_pages(
     property_id: str,
     date_start: str = "7daysAgo",
     date_end: str = "today",
     limit: int = 20,
 ) -> dict[str, Any]:
-    """
-    Top URLs por sesiones con métricas SEO/UX comunes.
-
-    Devuelve por cada pagePath: sessions, activeUsers, bounceRate, averageSessionDuration.
-    """
+    """Top pages by sessions, with active users, bounce rate and average session duration."""
     return run_report(
         property_id=property_id,
         dimensions=["pagePath", "pageTitle"],
@@ -149,20 +135,18 @@ def top_pages(
         date_end=date_end,
         limit=limit,
         order_by_metric="sessions",
-        order_desc=True,
     )
 
 
-@mcp.tool()
 def events_summary(
     property_id: str,
     date_start: str = "7daysAgo",
     date_end: str = "today",
     limit: int = 50,
 ) -> dict[str, Any]:
-    """
-    Conteo de eventos disparados. Útil para auditar QUÉ se está midiendo
-    y detectar gap entre key events declarados y eventos reales.
+    """Count of every event that fired, to audit what is actually being measured.
+
+    Compare it with list_key_events to find key events that never fire.
     """
     return run_report(
         property_id=property_id,
@@ -172,18 +156,16 @@ def events_summary(
         date_end=date_end,
         limit=limit,
         order_by_metric="eventCount",
-        order_desc=True,
     )
 
 
-@mcp.tool()
 def traffic_sources(
     property_id: str,
     date_start: str = "7daysAgo",
     date_end: str = "today",
     limit: int = 20,
 ) -> dict[str, Any]:
-    """Top fuentes de tráfico (source/medium) con conversions."""
+    """Top traffic sources (source / medium) with sessions, active users and conversions."""
     return run_report(
         property_id=property_id,
         dimensions=["sessionSource", "sessionMedium"],
@@ -192,17 +174,15 @@ def traffic_sources(
         date_end=date_end,
         limit=limit,
         order_by_metric="sessions",
-        order_desc=True,
     )
 
 
-@mcp.tool()
 def conversions_summary(
     property_id: str,
     date_start: str = "7daysAgo",
     date_end: str = "today",
 ) -> dict[str, Any]:
-    """Conversions por event_name. Resumen de Key Events activos."""
+    """Conversions and total users per event name: a summary of the active key events."""
     return run_report(
         property_id=property_id,
         dimensions=["eventName"],
@@ -211,20 +191,19 @@ def conversions_summary(
         date_end=date_end,
         limit=25,
         order_by_metric="conversions",
-        order_desc=True,
     )
 
 
-@mcp.tool()
 def web_vitals_summary(
     property_id: str,
     date_start: str = "7daysAgo",
     date_end: str = "today",
 ) -> dict[str, Any]:
-    """
-    Breakdown de Core Web Vitals capturados por nuestro WebVitalsReporter.
-    Requiere: custom dimensions `web_vital_metric` + `web_vital_rating`
-    declaradas en la propiedad.
+    """Core Web Vitals reported by your own site as GA4 events.
+
+    Requires the site to send web-vitals events with the parameters `web_vital_metric` and
+    `web_vital_rating`, both registered as event-scoped custom dimensions.
+    For Google's field data use psi_field_data_only instead.
     """
     return run_report(
         property_id=property_id,
@@ -234,61 +213,64 @@ def web_vitals_summary(
         date_end=date_end,
         limit=50,
         order_by_metric="eventCount",
-        order_desc=True,
     )
 
 
-@mcp.tool()
 def audit_portfolio(
     property_ids: list[str],
     date_start: str = "7daysAgo",
     date_end: str = "today",
 ) -> dict[str, Any]:
-    """
-    Auditoría consolidada de un portafolio de propiedades GA4.
+    """Summary metrics for several GA4 properties in one call.
 
-    Ejecuta consultas resumidas (sessions, activeUsers, conversions, bounceRate)
-    para cada propiedad provista y consolida los resultados en un solo reporte.
+    Returns sessions, active users, conversions, bounce rate and average session duration per
+    property, plus the properties that failed and why.
 
     Args:
-        property_ids: Lista de IDs numéricos o 'properties/...' (ej. ['123456789', '987654321']).
-        date_start: Rango de fecha inicio (default: '7daysAgo').
-        date_end: Rango de fecha fin (default: 'today').
-
-    Returns:
-        Dict con métricas agregadas por propiedad y errores (si alguna fallara).
+        property_ids: e.g. ['123456789', '987654321'].
     """
-    summary_results: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-
+    ok: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    empty = {
+        "sessions": 0,
+        "activeUsers": 0,
+        "conversions": 0,
+        "bounceRate": 0.0,
+        "averageSessionDuration": 0.0,
+    }
     for pid in property_ids:
         try:
             report = run_report(
                 property_id=pid,
-                dimensions=[],
-                metrics=["sessions", "activeUsers", "conversions", "bounceRate", "averageSessionDuration"],
+                metrics=list(empty),
                 date_start=date_start,
                 date_end=date_end,
                 limit=1,
             )
             rows = report.get("rows", [])
-            metrics_summary = rows[0] if rows else {
-                "sessions": 0, "activeUsers": 0, "conversions": 0, "bounceRate": 0.0, "averageSessionDuration": 0.0
-            }
-            summary_results.append({
-                "property_id": pid,
-                "metrics": metrics_summary,
-            })
+            ok.append({"property_id": pid, "metrics": rows[0] if rows else dict(empty)})
         except Exception as exc:
-            errors.append({
-                "property_id": pid,
-                "error": str(exc),
-            })
-
+            failed.append({"property_id": pid, "error": str(exc)})
     return {
         "portfolio_count": len(property_ids),
         "date_range": {"start": date_start, "end": date_end},
-        "successful_audits": summary_results,
-        "failed_audits": errors,
+        "successful_audits": ok,
+        "failed_audits": failed,
     }
 
+
+TOOLS = (
+    run_report,
+    run_realtime_report,
+    top_pages,
+    events_summary,
+    traffic_sources,
+    conversions_summary,
+    web_vitals_summary,
+    audit_portfolio,
+)
+
+
+def register(mcp: FastMCP, *, writes: bool) -> None:
+    for fn in TOOLS:
+        mcp.add_tool(fn, annotations=READ)
