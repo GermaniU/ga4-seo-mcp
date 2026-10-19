@@ -6,8 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-10-19
+
 ### Fixed
-- Both READMEs now use absolute repository URLs for every link and image. PyPI renders the project description outside the repository, so relative paths (`docs/assets/demo.gif`, `LICENSE`, `docs/TOOLS.md`…) resolved against `pypi.org` and returned 404 — the demo GIF showed as a broken image. Images load from `raw.githubusercontent.com`; prose links point to `blob/main`, which works on GitHub too.
+- Both READMEs now use absolute repository URLs for every link and image. PyPI renders the project description outside the repository, so relative paths (`docs/assets/demo.gif`, `LICENSE`, `docs/TOOLS.md`…) resolved against `pypi.org` and returned 404 — the demo GIF showed as a broken image. Images load from `raw.githubusercontent.com`; prose links point to `blob/main`, which works on GitHub too. No code changes.
 
 ## [0.1.0] — 2026-10-19
 
@@ -40,5 +42,6 @@ First public version, derived from an internal prototype with a clean history.
 - PageSpeed requests encode the audited URL properly (URLs with query strings used to break).
 - The HTTP default port is `8000`.
 
-[Unreleased]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/GermaniU/ga4-seo-mcp/releases/tag/v0.1.0

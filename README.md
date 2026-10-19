@@ -87,8 +87,6 @@ claude mcp add ga4-seo -- uvx ga4-seo-mcp
 
 Ask: *"List my GA4 properties and show last week's sessions for the first one."*
 
-> **Before the first PyPI release**, run it from GitHub instead: `uvx --from git+https://github.com/GermaniU/ga4-seo-mcp ga4-seo-mcp`.
-
 ---
 
 ## 🧰 Toolsets, scopes and tools
