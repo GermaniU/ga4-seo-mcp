@@ -15,10 +15,16 @@ ALL_INTERFACES = {"0.0.0.0", "::", ""}
 
 
 def transport_security(
-    host: str, cors_origins: list[str] | None = None
+    host: str, cors_origins: list[str] | None = None, extra_hosts: list[str] | None = None
 ) -> TransportSecuritySettings:
     allowed_hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
     allowed_origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+    for extra in extra_hosts or []:
+        # Names or IPs the operator expects clients to use: the machine's LAN address
+        # when binding 0.0.0.0, for example. Anything not listed here is still rejected.
+        name = f"[{extra}]" if ":" in extra else extra
+        allowed_hosts += [name, f"{name}:*"]
+        allowed_origins += [f"http://{name}:*", f"https://{name}:*"]
     if host not in LOOPBACK | ALL_INTERFACES:
         name = f"[{host}]" if ":" in host else host
         allowed_hosts += [name, f"{name}:*"]
@@ -57,6 +63,7 @@ def build_http_app(
     host: str,
     auth_token: str | None = None,
     cors_origins: list[str] | None = None,
+    allowed_hosts: list[str] | None = None,
 ):
     """ASGI app for the `sse` or `streamable-http` transport with the security layers applied."""
     if host in ALL_INTERFACES and not auth_token:
@@ -66,7 +73,14 @@ def build_http_app(
             "127.0.0.1.",
             file=sys.stderr,
         )
-    mcp.settings.transport_security = transport_security(host, cors_origins)
+    if host in ALL_INTERFACES and not allowed_hosts:
+        print(
+            f"WARNING: bound to {host or 'all interfaces'}, but only loopback is an "
+            "allowed Host, so LAN clients get 421. Set MCP_ALLOWED_HOSTS to the "
+            "address they use (e.g. MCP_ALLOWED_HOSTS=192.168.1.10).",
+            file=sys.stderr,
+        )
+    mcp.settings.transport_security = transport_security(host, cors_origins, allowed_hosts)
     app = mcp.sse_app() if transport == "sse" else mcp.streamable_http_app()
     if auth_token:
         app = BearerAuthMiddleware(app, auth_token)
