@@ -34,7 +34,14 @@ BOLD, DIM, GREEN, CYAN, YELLOW, RESET = (
 )
 
 
+THIN_SPACES = {"\u202f": " ", "\u00a0": " ", "\u2009": " ", "\u2007": " "}
+
+
 def say(text: str = "", pause: float = 0.6) -> None:
+    # PageSpeed formatea sus displayValue con espacios angostos (U+202F/NBSP); la
+    # fuente del GIF no tiene ese glifo y lo dibuja como un cuadro roto.
+    for bad, good in THIN_SPACES.items():
+        text = text.replace(bad, good)
     print(text, flush=True)
     time.sleep(pause)
 
@@ -53,6 +60,11 @@ def payload(result):
 
 
 async def main() -> None:
+    # Primera línea ya en pantalla: si no, el primer cuadro del GIF sale vacío y
+    # LinkedIn lo puede usar como miniatura.
+    say(f"{DIM}$ python scripts/demo.py   ·   MCP over stdio, read-only{RESET}", 0.8)
+    say()
+
     params = StdioServerParameters(
         command=sys.executable, args=["-m", "ga4_seo_mcp.server"], env=dict(os.environ)
     )
@@ -87,10 +99,17 @@ async def main() -> None:
 
                 summaries = payload(await session.call_tool("list_account_summaries", {}))
                 account_id = summaries[0]["account_id"]
-                call_line(
-                    "bootstrap_site_measurement",
-                    f"site_url={NEW_SITE!r}, account_id='•••••', key_events=[…], apply=False",
+                # La llamada va completa: si se omite un argumento, quien la copie
+                # obtiene otro plan. En varias lineas porque una sola no cabe.
+                say(f"{CYAN}> bootstrap_site_measurement({RESET}", 0.2)
+                say(f"{CYAN}    site_url={NEW_SITE!r}, account_id='•••••',{RESET}", 0.2)
+                say(f"{CYAN}    key_events=['generate_lead'],{RESET}", 0.2)
+                say(
+                    f"{CYAN}    custom_dimensions=[{{'parameter_name': 'plan_type',"
+                    f" 'display_name': 'Plan type'}}],{RESET}",
+                    0.2,
                 )
+                say(f"{CYAN}    apply=False){RESET}", 0.3)
                 plan = payload(
                     await session.call_tool(
                         "bootstrap_site_measurement",
@@ -111,7 +130,10 @@ async def main() -> None:
                     detail = step.get("event_name") or step.get("parameter_name") or ""
                     color = GREEN if step["action"] == "exists" else YELLOW
                     say(f"  {step['step']:<32} {detail:<14} {color}{step['action']}{RESET}", 0.35)
-                say(f"  {DIM}{plan['note']}{RESET}", 2.5)
+                # Dos líneas cortas en vez de una que se parte a media palabra con
+                # el ancho de terminal del GIF.
+                say(f"  {DIM}Plan only, nothing was changed.{RESET}", 0.5)
+                say(f"  {DIM}Restart with --enable-writes to apply.{RESET}", 2.5)
 
 
 if __name__ == "__main__":
