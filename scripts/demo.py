@@ -101,7 +101,7 @@ async def main() -> None:
                 account_id = summaries[0]["account_id"]
                 call_line(
                     "bootstrap_site_measurement",
-                    f"site_url={NEW_SITE!r}, account_id='•••••', key_events=[…], apply=False",
+                    f"site_url={NEW_SITE!r}, key_events=[…], apply=False",
                 )
                 plan = payload(
                     await session.call_tool(
@@ -123,7 +123,10 @@ async def main() -> None:
                     detail = step.get("event_name") or step.get("parameter_name") or ""
                     color = GREEN if step["action"] == "exists" else YELLOW
                     say(f"  {step['step']:<32} {detail:<14} {color}{step['action']}{RESET}", 0.35)
-                say(f"  {DIM}{plan['note']}{RESET}", 2.5)
+                # Dos líneas cortas en vez de una que se parte a media palabra con
+                # el ancho de terminal del GIF.
+                say(f"  {DIM}Plan only, nothing was changed.{RESET}", 0.5)
+                say(f"  {DIM}Apply it with --enable-writes.{RESET}", 2.5)
 
 
 if __name__ == "__main__":
