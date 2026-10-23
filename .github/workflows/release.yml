@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2  # pin for SHA-verified uv download
         with:
           python-version: "3.12"
 
@@ -50,7 +50,7 @@ jobs:
 
       # OIDC, no API token: configure the Trusted Publisher on pypi.org first
       # (owner GermaniU, repo ga4-seo-mcp, workflow release.yml, environment pypi).
-      - uses: pypa/gh-action-pypi-publish@v1.14.2
+      - uses: pypa/gh-action-pypi-publish@aef6c9b6e301dc803e1bc9133e9ce67ae9b0906b  # v1.14.3
 
   image:
     name: Multi-arch image to GHCR
@@ -85,6 +85,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          pull: true
+          no-cache: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
