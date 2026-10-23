@@ -7,12 +7,12 @@
     "url": "https://github.com/GermaniU/ga4-seo-mcp",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.1.2",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "ga4-seo-mcp",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -79,7 +79,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/germaniu/ga4-seo-mcp:0.1.0",
+      "identifier": "ghcr.io/germaniu/ga4-seo-mcp:0.1.2",
       "transport": {
         "type": "stdio"
       },

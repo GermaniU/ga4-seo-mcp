@@ -1,6 +1,6 @@
 [project]
 name = "ga4-seo-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "MCP server for Google Analytics 4, Search Console and PageSpeed: audit and set up site measurement."
 readme = "README.md"
 license = "MIT"
@@ -29,7 +29,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-  "mcp[cli]==1.28.1",
+  "mcp[cli]==1.30.0",
   # TLS trust store used by requests/httpx. 2026.10.19 excludes the distrusted eMudhra root
   # (emSign ECC Root CA - G3) and restores the eMudhra roots that 2026.10.18 dropped; keep
   # this floor even though certifi is otherwise a transitive dependency.
