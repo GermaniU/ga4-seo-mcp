@@ -1,6 +1,7 @@
 FROM python:3.12-slim
 
-COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
+# uv >= 0.13.4 no longer trusts the distrusted eMudhra root; pinned by digest.
+COPY --from=ghcr.io/astral-sh/uv:0.13.4@sha256:9f130421e930bfbdc563c00740466603f8723158e90297d07957c2294640262b /uv /usr/local/bin/uv
 
 # The MCP Registry verifies image ownership with this label: it must match "name" in server.json.
 LABEL io.modelcontextprotocol.server.name="io.github.GermaniU/ga4-seo-mcp"
@@ -22,7 +23,13 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
 
-RUN uv sync --locked --no-editable --extra ads \
+# The base image ships pip 25.x, whose vendored CA bundle still trusts the distrusted eMudhra
+# root. The server never calls pip, but the image should not carry a vulnerable installer:
+# replace it with a hash-pinned pip 26.2.2 installed by uv (never by the old pip itself).
+RUN echo "pip==26.2.2 --hash=sha256:fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70" > /tmp/pip-requirements.txt \
+    && uv pip install --system --no-cache --require-hashes -r /tmp/pip-requirements.txt \
+    && rm /tmp/pip-requirements.txt \
+    && uv sync --locked --no-editable --extra ads \
     && useradd --system --uid 10001 --create-home --home-dir /home/app app
 
 # Credentials: mount the ADC file or a service account key read-only (e.g. at

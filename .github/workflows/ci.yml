@@ -67,7 +67,12 @@ jobs:
 
       - name: Install the wheel in a fresh venv and run the CLI
         run: |
-          python -m venv /tmp/clean
+          # The runner's bundled pip predates 26.2.2 and still trusts the distrusted eMudhra root:
+          # create the venv without it and let uv install a hash-pinned pip 26.2.2 instead.
+          python -m venv --without-pip /tmp/clean
+          echo "pip==26.2.2 --hash=sha256:fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70" > /tmp/pip-requirements.txt
+          uv pip install --python /tmp/clean/bin/python --require-hashes -r /tmp/pip-requirements.txt
+          /tmp/clean/bin/pip --version
           /tmp/clean/bin/pip install --quiet dist/*.whl
           /tmp/clean/bin/ga4-seo-mcp --version
           /tmp/clean/bin/ga4-seo-mcp --help > /dev/null

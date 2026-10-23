@@ -30,6 +30,10 @@ classifiers = [
 ]
 dependencies = [
   "mcp[cli]==1.28.1",
+  # TLS trust store used by requests/httpx. 2026.10.19 excludes the distrusted eMudhra root
+  # (emSign ECC Root CA - G3) and restores the eMudhra roots that 2026.10.18 dropped; keep
+  # this floor even though certifi is otherwise a transitive dependency.
+  "certifi>=2026.10.19",
   "google-analytics-admin>=0.24.0",
   "google-analytics-data>=0.18.0",
   "google-api-python-client>=2.120.0",
@@ -58,6 +62,11 @@ ga4-seo-mcp = "ga4_seo_mcp.server:main"
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+# Older uv releases still trust the distrusted eMudhra root when talking to package indexes.
+# astral-sh/setup-uv in CI also reads this to choose the uv version it installs.
+[tool.uv]
+required-version = ">=0.13.4"
 
 [tool.setuptools.packages.find]
 where = ["src"]

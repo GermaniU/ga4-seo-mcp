@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Security
+- Stop trusting the distrusted eMudhra root (`emSign ECC Root CA - G3`) anywhere in the toolchain:
+  - `certifi>=2026.10.19` is now a direct dependency, and `uv.lock` pins certifi 2026.10.19
+    (it excludes that root and restores the other eMudhra roots that 2026.10.18 dropped).
+  - `uv>=0.13.4` is required (`[tool.uv] required-version`); CI's `setup-uv` picks it up.
+  - The Docker image copies uv 0.13.4 pinned by digest and replaces the base image's pip 25.x
+    with a hash-pinned pip 26.2.2 installed by uv.
+  - The CI wheel-install check no longer uses the runner's bundled pip: uv installs the same
+    hash-pinned pip 26.2.2 into the clean venv first.
+
 ## [0.1.1] — 2026-10-19
 
 ### Fixed
