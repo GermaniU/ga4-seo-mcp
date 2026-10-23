@@ -6,8 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-10-23
+
 ### Security
-- Stop trusting the distrusted eMudhra root (`emSign ECC Root CA - G3`) anywhere in the toolchain:
+- Pin `mcp[cli]==1.30.0`, the first patched 1.x release for CVE-2026-59951 / GHSA-84m7-p3x7-pcfv, to bound and reclaim StreamableHTTP sessions.
+- Stop trusting the distrusted eMudhra root (`emSign ECC Root CA - G3`) in Python HTTPS/gRPC bundles and project build/publish tooling:
   - `certifi>=2026.10.19` is now a direct dependency, and `uv.lock` pins certifi 2026.10.19
     (it excludes that root and restores the other eMudhra roots that 2026.10.18 dropped).
   - `uv>=0.13.4` is required (`[tool.uv] required-version`); CI's `setup-uv` picks it up.
@@ -55,6 +58,7 @@ First public version, derived from an internal prototype with a clean history.
 - PageSpeed requests encode the audited URL properly (URLs with query strings used to break).
 - The HTTP default port is `8000`.
 
-[Unreleased]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/GermaniU/ga4-seo-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/GermaniU/ga4-seo-mcp/releases/tag/v0.1.0
