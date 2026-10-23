@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
     with a hash-pinned pip 26.2.2 installed by uv.
   - The CI wheel-install check no longer uses the runner's bundled pip: uv installs the same
     hash-pinned pip 26.2.2 into the clean venv first.
+  - `grpcio>=1.84.1` and `grpcio-status>=1.84.1` fix gRPC's bundled roots (still contained G3).
+  - `pypa/gh-action-pypi-publish@v1.14.3` replaces the vulnerable v1.14.2.
+  - Docker release builds use `pull: true` and `no-cache: true`.
 
 ## [0.1.1] — 2026-10-19
 
