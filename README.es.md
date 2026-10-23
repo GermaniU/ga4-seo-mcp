@@ -52,7 +52,7 @@ Este servidor lo construye y mantiene [Germani Uicab](https://serverstack.soluti
 
 ## ⚡ Inicio rápido
 
-**1. Instala [`uv`](https://docs.astral.sh/uv/)**: el cliente lanza el servidor con `uvx`, no hace falta instalar nada más.
+**1. Instala [`uv`](https://docs.astral.sh/uv/) 0.13.4 o posterior**: el cliente lanza el servidor con `uvx`, no hace falta instalar nada más.
 
 **2. Inicia sesión con los permisos mínimos.** El CLI imprime el comando `gcloud` exacto para los toolsets que actives:
 

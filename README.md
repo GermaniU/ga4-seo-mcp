@@ -54,7 +54,7 @@ Extras: optional keyword research with **DataForSEO** (exact long-tail volumes) 
 
 ## ⚡ Quick start
 
-**1. Install [`uv`](https://docs.astral.sh/uv/)** — the client launches the server with `uvx`; nothing else to install.
+**1. Install [`uv`](https://docs.astral.sh/uv/) 0.13.4 or newer** — the client launches the server with `uvx`; nothing else to install.
 
 **2. Log in with the minimum scopes.** The CLI prints the exact `gcloud` command for the toolsets you enable:
 
