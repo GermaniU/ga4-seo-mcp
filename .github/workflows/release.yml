@@ -35,7 +35,7 @@ jobs:
         with:
           ref: refs/tags/${{ env.RELEASE_TAG }}
 
-      - uses: astral-sh/setup-uv@v10.3.2  # pin for SHA-verified uv download
+      - uses: astral-sh/setup-uv@v10.3.3  # pin for SHA-verified uv download
         with:
           python-version: "3.12"
 
