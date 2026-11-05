@@ -13,6 +13,8 @@
 [![CI](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CONTRIBUTING.md)
 
+[![GA4 SEO MCP server](https://mcprush.com/badge/ga4-seo-mcp/card.svg)](https://mcprush.com/to/ga4-seo-mcp?ref=badge)
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/GermaniU/ga4-seo-mcp/main/docs/assets/demo.gif" alt="Un agente audita un sitio público con PageSpeed y planea la configuración de GA4 + Search Console de un sitio nuevo" width="780">
 </p>

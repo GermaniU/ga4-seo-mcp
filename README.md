@@ -13,6 +13,8 @@
 [![CI](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/GermaniU/ga4-seo-mcp/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GermaniU/ga4-seo-mcp/blob/main/CONTRIBUTING.md)
 
+[![GA4 SEO MCP server](https://mcprush.com/badge/ga4-seo-mcp/card.svg)](https://mcprush.com/to/ga4-seo-mcp?ref=badge)
+
 **Tags:** `mcp-server` · `ga4` · `google-analytics` · `search-console` · `seo` · `pagespeed` · `core-web-vitals` · `keyword-research` · `claude-code` · `cursor`
 
 <p align="center">
